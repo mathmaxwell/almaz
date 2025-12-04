@@ -1,15 +1,23 @@
 package auth
 
 import (
+	"demo/purpleSchool/pkg/db"
 	"demo/purpleSchool/pkg/req"
 	"demo/purpleSchool/pkg/res"
 	"demo/purpleSchool/pkg/token"
 	"net/http"
 )
 
+func NewUserRepository(dataBase *db.Db) *AuthRepository {
+	return &AuthRepository{
+		DataBase: dataBase,
+	}
+}
+
 func NewAuthHandler(router *http.ServeMux, deps AuthhandlerDeps) {
 	handler := &AuthHandler{
-		Config: deps.Config,
+		AuthRepository: *deps.AuthRepository,
+		Config:         deps.Config,
 	}
 	router.HandleFunc("/users/login", handler.login())
 	router.HandleFunc("/users/register", handler.register())

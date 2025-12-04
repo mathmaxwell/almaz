@@ -5,7 +5,6 @@ import (
 	"demo/purpleSchool/internal/auth"
 	"demo/purpleSchool/internal/department"
 	"demo/purpleSchool/internal/employees"
-	"demo/purpleSchool/internal/link"
 	"demo/purpleSchool/internal/messages"
 	"demo/purpleSchool/internal/workSchedule"
 	"demo/purpleSchool/pkg/cors"
@@ -14,17 +13,18 @@ import (
 )
 
 func main() {
-
 	conf := configs.LoadConfig()
-	db := db.NewDB(conf)
+	database := db.NewDB(conf)
 	//repositories
-	linkRepository := link.NewLinkRepository(db)
 	router := http.NewServeMux()
 	mux := cors.Cors(router)
-	// Handler
+	//register
+	authRepo := auth.NewUserRepository(database)
 	auth.NewAuthHandler(router, auth.AuthhandlerDeps{
-		Config: conf,
+		Config:         conf,
+		AuthRepository: authRepo,
 	})
+	//employees
 	employees.NewEmployeeHandler(router, employees.EmployeeshandlerDeps{
 		Config: conf,
 	})
@@ -34,13 +34,8 @@ func main() {
 	messages.NewMessagesHandler(router, messages.MessagehandlerDeps{
 		Config: conf,
 	})
-
 	department.NewDeportamentHandler(router, department.DepartmenthandlerDeps{
 		Config: conf,
-	})
-
-	link.NewLinkHandler(router, link.LinkhandlerDeps{
-		LinkRepository: linkRepository,
 	})
 
 	server := http.Server{
