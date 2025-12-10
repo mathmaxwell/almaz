@@ -3,6 +3,7 @@ package main
 import (
 	"demo/purpleSchool/internal/auth"
 	"demo/purpleSchool/internal/employees"
+	workschedule "demo/purpleSchool/internal/workSchedule"
 	"os"
 
 	"github.com/joho/godotenv"
@@ -21,4 +22,6 @@ func main() {
 	}
 	db.AutoMigrate(&auth.LoginResponse{})
 	db.AutoMigrate(&employees.Employee{})
+	db.AutoMigrate(&employees.EmployeeStatus{})
+	db.AutoMigrate(&workschedule.IWorkScheduleForDay{})
 }

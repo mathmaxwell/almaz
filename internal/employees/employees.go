@@ -7,6 +7,7 @@ import (
 	"demo/purpleSchool/pkg/req"
 	"demo/purpleSchool/pkg/res"
 	"demo/purpleSchool/pkg/token"
+	"fmt"
 	"net/http"
 	"time"
 )
@@ -62,7 +63,7 @@ func (handler *EmployeesHandler) createEmployees() http.HandlerFunc {
 			res.Json(w, "failed to save image", http.StatusInternalServerError)
 			return
 		}
-		newEmployee := IEmployeesResponse{
+		newEmployee := Employee{
 			Id:                         token.CreateId(),
 			Gender:                     r.FormValue("gender"),
 			Full_name:                  r.FormValue("full_name"),
@@ -79,7 +80,7 @@ func (handler *EmployeesHandler) createEmployees() http.HandlerFunc {
 			Email:                      r.FormValue("Email"),
 			Image:                      photoPath,
 		}
-		if err := fields.ValidateFields(newEmployee, IEmployeesResponse{}); err != nil {
+		if err := fields.ValidateFields(newEmployee, Employee{}); err != nil {
 			res.Json(w, err.Error(), 400)
 			return
 		}
@@ -95,14 +96,219 @@ func (handler *EmployeesHandler) createEmployees() http.HandlerFunc {
 		res.Json(w, response, 200)
 	}
 }
+func (handler *EmployeesHandler) getEmployeesById() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		body, err := req.HandleBody[GetEmployeesByIdRequest](&w, r)
+		if err != nil {
+			res.Json(w, err.Error(), 400)
+			return
+		}
+		user, err := handler.AuthHandler.GetUserByToken(body.Token)
+		if err != nil {
+			res.Json(w, "user is not found", 401)
+			return
+		}
+		if user.UserRole != 1 {
+			res.Json(w, "you are not admin", 403)
+			return
+		}
+		var employee Employee
+		err = handler.EmployeeRepository.DataBase.Where("id = ?", body.Id).First(&employee).Error
+		if err != nil {
+			res.Json(w, "employee is not found", 400)
+			return
+		}
+		res.Json(w, employee, 200)
+	}
+}
+func (handler *EmployeesHandler) getEmployees() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		body, err := req.HandleBody[GetEmployeesRequest](&w, r)
+		if err != nil {
+			res.Json(w, err.Error(), 400)
+			return
+		}
+		user, err := handler.AuthHandler.GetUserByToken(body.Token)
+		if err != nil {
+			res.Json(w, "user is not found", 401)
+			return
+		}
+		if user.UserRole != 1 {
+			res.Json(w, "you are not admin", 403)
+			return
+		}
+		if body.Page <= 0 {
+			body.Page = 1
+		}
+		if body.Count <= 0 {
+			body.Count = 10
+		}
+		offset := (body.Page - 1) * body.Count
+		sortOrder := "ASC"
+		if !body.SortAsc {
+			sortOrder = "DESC"
+		}
+		orderClause := ""
+		if body.SortField == "date_of_birth" {
+			orderClause = fmt.Sprintf(
+				"make_date(year_of_birth::int, birth_month::int, date_of_birth::int) %s",
+				sortOrder,
+			)
+		} else {
+			sortField := "full_name"
+			if body.SortField != "" {
+				sortField = body.SortField
+			}
+			orderClause = fmt.Sprintf("%s %s", sortField, sortOrder)
+		}
+		var employees []Employee
+		err = handler.EmployeeRepository.DataBase.
+			Limit(body.Count).
+			Offset(offset).
+			Order(orderClause).
+			Find(&employees).Error
+		if err != nil {
+			res.Json(w, "failed to get employees", 500)
+			return
+		}
+		res.Json(w, employees, 200)
+	}
+}
+func (handler *EmployeesHandler) getEmployeesCount() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		body, err := req.HandleBody[IEmployeesCountRequest](&w, r)
+		if err != nil {
+			res.Json(w, err.Error(), 400)
+			return
+		}
+		user, err := handler.AuthHandler.GetUserByToken(body.Token)
+		if err != nil {
+			res.Json(w, "user is not found", 401)
+			return
+		}
+		if user.UserRole != 1 {
+			res.Json(w, "you are not admin", 403)
+			return
+		}
+		targetDate := body.Day + body.Month*100 + body.Year*1000
+		db := handler.EmployeeRepository.DataBase
+		var terminated, onProbation, onVacation, onSickLeave, onBusinessTrip, absence, total int64
+		db.Model(&EmployeeStatus{}).
+			Where("status = ?", "on_vacation").
+			Where("start_day + start_month*100 + start_year*1000 <= ?", targetDate).
+			Where("end_day + end_month*100 + end_year*1000 >= ?", targetDate).
+			Count(&onVacation)
+
+		db.Model(&EmployeeStatus{}).
+			Where("status = ?", "on_sick_leave").
+			Where("start_day + start_month*100 + start_year*1000 <= ?", targetDate).
+			Where("end_day + end_month*100 + end_year*1000 >= ?", targetDate).
+			Count(&onSickLeave)
+		db.Model(&EmployeeStatus{}).
+			Where("status = ?", "on_a_business_trip").
+			Where("start_day + start_month*100 + start_year*1000 <= ?", targetDate).
+			Where("end_day + end_month*100 + end_year*1000 >= ?", targetDate).
+			Count(&onBusinessTrip)
+
+		// db.Model(&Employee{}).Where("absence = ?", true).Count(&absence) //неявка
+		db.Model(&Employee{}).Count(&total)
+		data := IEmployeesCountResponse{
+			Terminated:         int(terminated),
+			On_probation:       int(onProbation),
+			On_vacation:        int(onVacation),
+			On_sick_leave:      int(onSickLeave),
+			On_a_business_trip: int(onBusinessTrip),
+			Absence:            int(absence),
+			Total_employees:    int(total),
+		}
+		res.Json(w, data, 200)
+	}
+} //absence is not ready
+func (handler *EmployeesHandler) updateEmployees() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		userToken := r.FormValue("token")
+		user, err := handler.AuthHandler.GetUserByToken(userToken)
+		if err != nil {
+			res.Json(w, "user is not found", 401)
+			return
+		}
+		if user.UserRole != 1 {
+			res.Json(w, "you are not admin", 403)
+			return
+		}
+		employeeId := r.FormValue("id")
+		var employee Employee
+		err = handler.EmployeeRepository.DataBase.Where("id = ?", employeeId).First(&employee).Error
+		if err != nil {
+			res.Json(w, "employee is not found", 400)
+			return
+		}
+		if err := r.ParseMultipartForm(10 << 20); err != nil {
+			res.Json(w, "failed to parse form", http.StatusBadRequest)
+			return
+		}
+		var photoPath string
+		file, header, err := r.FormFile("image")
+		if err == nil && file != nil {
+			photoPath, err = files.SaveFile(file, header)
+			if err != nil {
+				res.Json(w, "failed to save image", 500)
+				return
+			}
+		} else {
+			photoPath = employee.Image
+		}
+		newEmployee := Employee{
+			Id:                         employeeId,
+			Gender:                     fields.GetOrDefault(r.FormValue("gender"), employee.Gender),
+			Full_name:                  fields.GetOrDefault(r.FormValue("full_name"), employee.Full_name),
+			PINFL:                      fields.GetOrDefault(r.FormValue("PINFL"), employee.PINFL),
+			Phone_number:               fields.GetOrDefault(r.FormValue("phone_number"), employee.Phone_number),
+			Passport_series_and_number: fields.GetOrDefault(r.FormValue("passport_series_and_number"), employee.Passport_series_and_number),
+			Department:                 fields.GetOrDefault(r.FormValue("department"), employee.Department),
+			Position:                   fields.GetOrDefault(r.FormValue("position"), employee.Position),
+			Date_of_birth:              fields.GetOrDefault(r.FormValue("date_of_birth"), employee.Date_of_birth),
+			Birth_month:                fields.GetOrDefault(r.FormValue("birth_month"), employee.Birth_month),
+			Year_of_birth:              fields.GetOrDefault(r.FormValue("year_of_birth"), employee.Year_of_birth),
+			Place_of_birth:             fields.GetOrDefault(r.FormValue("place_of_birth"), employee.Place_of_birth),
+			Nationality:                fields.GetOrDefault(r.FormValue("nationality"), employee.Nationality),
+			Email:                      fields.GetOrDefault(r.FormValue("Email"), employee.Email),
+			Image:                      photoPath,
+		}
+		handler.EmployeeRepository.DataBase.Model(&employee).Updates(newEmployee)
+		res.Json(w, "employee updated successfully", 200)
+	}
+}
 
 func (handler *EmployeesHandler) createStatus() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		body, err := req.HandleBody[createStatusRequest](&w, r)
-		if body.Token == "" {
-			return
-		} //проверка токена
 		if err != nil {
+			res.Json(w, err.Error(), 400)
+			return
+		}
+		user, err := handler.AuthHandler.GetUserByToken(body.Token)
+		if err != nil {
+			res.Json(w, "user is not found", 401)
+			return
+		}
+		if user.UserRole != 1 {
+			res.Json(w, "you are not admin", 403)
+			return
+		}
+		data := EmployeeStatus{
+			Id:         token.CreateId(),
+			EmployeeId: body.EmployeeId,
+			Status:     body.Status,
+			StartDay:   body.StartDay,
+			StartMonth: body.StartMonth,
+			StartYear:  body.StartYear,
+			EndDay:     body.EndDay,
+			EndMonth:   body.EndMonth,
+			EndYear:    body.EndYear,
+		}
+		if err := handler.EmployeeRepository.DataBase.Create(&data).Error; err != nil {
+			res.Json(w, "db error", 500)
 			return
 		}
 		res.Json(w, body, 200)
@@ -111,203 +317,59 @@ func (handler *EmployeesHandler) createStatus() http.HandlerFunc {
 func (handler *EmployeesHandler) getStatusById() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		body, err := req.HandleBody[GetEmployeesByIdRequest](&w, r)
-		if body.Token == "" {
-			return
-		} //проверка токена
 		if err != nil {
+			res.Json(w, err.Error(), 401)
+			return
+		}
+		user, err := handler.AuthHandler.GetUserByToken(body.Token)
+		if err != nil {
+			res.Json(w, "user is not found", 401)
+			return
+		}
+		if user.UserRole != 1 {
+			res.Json(w, "you are not admin", 403)
 			return
 		}
 
-		data1 := GetStatusByIdResponse{
-			Status:     "on_vacation",
-			StartDay:   5,
-			StartMonth: 11,
-			StartYear:  2025,
-			EndDay:     15,
-			EndMonth:   11,
-			EndYear:    2025,
-		}
-		data2 := GetStatusByIdResponse{
-			Status:     "on_sick_leave",
-			StartDay:   10,
-			StartMonth: 10,
-			StartYear:  2025,
-			EndDay:     20,
-			EndMonth:   10,
-			EndYear:    2025,
-		}
-		data3 := GetStatusByIdResponse{
-			Status:     "on_a_business_trip",
-			StartDay:   3,
-			StartMonth: 9,
-			StartYear:  2025,
-			EndDay:     23,
-			EndMonth:   9,
-			EndYear:    2025,
-		}
-		var data []GetStatusByIdResponse
-		data = append(data, data1)
-		data = append(data, data2)
-		data = append(data, data3)
-		res.Json(w, data, 200)
+		db := handler.EmployeeRepository.DataBase
+		var employeeStatusHistory []EmployeeStatus
+		db.Model(&EmployeeStatus{}).
+			Where("employee_id = ?", body.Id).
+			Find(&employeeStatusHistory)
+		res.Json(w, employeeStatusHistory, 200)
 	}
 }
+
 func (handler *EmployeesHandler) getEmployeesByStatus() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		body, err := req.HandleBody[GetEmployeesByStatusRequest](&w, r)
-		if body.Token == "" {
-			return
-		} //проверка токена
 		if err != nil {
+			res.Json(w, err.Error(), 401)
 			return
 		}
-		data := GetEmployeesByStatusResponse{
-			Ids: []string{token.CreateId(), token.CreateId(), token.CreateId(), token.CreateId(), token.CreateId(), token.CreateId(), token.CreateId(), token.CreateId(), token.CreateId(), token.CreateId(), token.CreateId(), token.CreateId(), token.CreateId(), token.CreateId(), token.CreateId(), token.CreateId(), token.CreateId(), token.CreateId(), token.CreateId(), token.CreateId(), token.CreateId(), token.CreateId(), token.CreateId(), token.CreateId(), token.CreateId(), token.CreateId(), token.CreateId(), token.CreateId(), token.CreateId(), token.CreateId(), token.CreateId(), token.CreateId(), token.CreateId(), token.CreateId(), token.CreateId(), token.CreateId()},
-		}
-		res.Json(w, data, 200)
-	}
-}
-
-func (handler *EmployeesHandler) updateEmployees() http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		userToken := r.FormValue("token")
-		employeeId := r.FormValue("id")
-		if userToken == "" {
-			res.Json(w, "unauthorized", 401)
-			return
-		}
-		if employeeId == "" {
-			res.Json(w, "unauthorized", 401)
-			return
-		}
-		// gender := r.FormValue("gender")
-		// Full_name := r.FormValue("full_name")
-		// PINFL := r.FormValue("PINFL")
-		// phone_number := r.FormValue("phone_number")
-		// passport_series_and_number := r.FormValue("passport_series_and_number")
-		// department := r.FormValue("department")
-		// position := r.FormValue("position")
-		// date_of_birth := r.FormValue("date_of_birth")
-		// birth_month := r.FormValue("birth_month")
-		// year_of_birth := r.FormValue("year_of_birth")
-		// place_of_birth := r.FormValue("place_of_birth")
-		// nationality := r.FormValue("nationality")
-		// Email := r.FormValue("Email")
-		file, header, err := r.FormFile("image")
-		if err == nil && file != nil {
-			res.Json(w, header, 200)
-			return
-		}
-		res.Json(w, "error image", 401)
-	}
-}
-func (handler *EmployeesHandler) getEmployeesById() http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		body, err := req.HandleBody[GetEmployeesByIdRequest](&w, r)
-		if body.Token == "" {
-			return
-		} //проверка токена
+		user, err := handler.AuthHandler.GetUserByToken(body.Token)
 		if err != nil {
+			res.Json(w, "user is not found", 401)
 			return
 		}
-		if body.Id == "" {
+		if user.UserRole != 1 {
+			res.Json(w, "you are not admin", 403)
 			return
-		} //ищет по ид
-
-		data := IEmployeesResponse{
-			Id:                         body.Id,
-			Gender:                     "male",
-			Passport_series_and_number: "AC1234567",
-			PINFL:                      "12345678901234",
-			Full_name:                  "Abdurahim Abdumalikov",
-			Image:                      "image",
-			Department:                 "Tad Industries",
-			Position:                   "developer",
-			Terminated:                 false,
-			On_probation:               false,
-			On_vacation:                false,
-			On_sick_leave:              false,
-			On_a_business_trip:         false,
-			Absence:                    false,
-			Date_of_birth:              "9",
-			Birth_month:                "2",
-			Year_of_birth:              "2003",
-			Place_of_birth:             "Tashkent",
-			Nationality:                "uzbek",
-			Email:                      "test123@gmail.com",
-			Phone_number:               "+998(99)999-88-77",
-			Work_schedule:              "полный день",
 		}
-
-		res.Json(w, data, 200)
+		var ids []string
+		targetDate := body.Day + body.Month*100 + body.Year*1000
+		db := handler.EmployeeRepository.DataBase
+		db.Model(&EmployeeStatus{}).Select("EmployeeId").
+			Where("status = ?", body.Status).
+			Where("start_day + start_month*100 + start_year*1000 <= ?", targetDate).
+			Where("end_day + end_month*100 + end_year*1000 >= ?", targetDate).
+			Find(&ids)
+		res.Json(w, ids, 200)
 	}
 }
-func (handler *EmployeesHandler) getEmployees() http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		body, err := req.HandleBody[GetEmployeesRequest](&w, r)
-		if body.Token == "" {
-			return
-		} //проверка токена
-		if err != nil {
-			return
-		}
 
-		//ищет за тех дней кто опоздал и сколько опоздал, график работы
-		var data []IEmployeesResponse
-		data1 := IEmployeesResponse{
-			Id:                         "123",
-			Gender:                     "male",
-			Passport_series_and_number: "AC1234567",
-			PINFL:                      "12345678901234",
-			Full_name:                  "Abdurahim Abdumalikov",
-			Image:                      "image",
-			Department:                 "Tad Industries",
-			Position:                   "developer",
-			Terminated:                 false,
-			On_probation:               false,
-			On_vacation:                false,
-			On_sick_leave:              false,
-			On_a_business_trip:         false,
-			Absence:                    false,
-			Date_of_birth:              "9",
-			Birth_month:                "2",
-			Year_of_birth:              "2003",
-			Place_of_birth:             "Tashkent",
-			Nationality:                "uzbek",
-			Email:                      "test123@gmail.com",
-			Phone_number:               "+998(99)999-88-77",
-			Work_schedule:              "полный день",
-		}
-		data2 := IEmployeesResponse{
-			Id:                         "321",
-			Gender:                     "female",
-			Passport_series_and_number: "AC7654321",
-			PINFL:                      "09876543321232",
-			Full_name:                  "test female",
-			Image:                      "image",
-			Department:                 "TADI",
-			Position:                   "TADI developer",
-			Terminated:                 false,
-			On_probation:               false,
-			On_vacation:                false,
-			On_sick_leave:              false,
-			On_a_business_trip:         false,
-			Absence:                    false,
-			Date_of_birth:              "1",
-			Birth_month:                "3",
-			Year_of_birth:              "1998",
-			Place_of_birth:             "Tashkent",
-			Nationality:                "uzbek",
-			Email:                      "test123@gmail.com",
-			Phone_number:               "+998(99)999-88-77",
-			Work_schedule:              "полный день",
-		}
-
-		data = append(data, data1)
-		data = append(data, data2)
-		res.Json(w, data, 200)
-	}
-}
+// finish
+// work schedule !!!
 func (handler *EmployeesHandler) getLateEmployeesById() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		body, err := req.HandleBody[getLateEmployeesByIdRequest](&w, r)
@@ -513,28 +575,6 @@ func (handler *EmployeesHandler) getLateEmployees() http.HandlerFunc {
 		}
 		data = append(data, data1)
 		data = append(data, data2)
-		res.Json(w, data, 200)
-	}
-}
-func (handler *EmployeesHandler) getEmployeesCount() http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		body, err := req.HandleBody[IEmployeesCountRequest](&w, r)
-		if body.Token == "" {
-			return
-		} //проверка токена
-		if err != nil {
-			return
-		}
-		data := IEmployeesCountResponse{
-			Terminated:         1,
-			On_probation:       2,
-			Active_employees:   3,
-			On_vacation:        4,
-			On_sick_leave:      5,
-			On_a_business_trip: 6,
-			Absence:            7,
-			Total_employees:    100,
-		}
 		res.Json(w, data, 200)
 	}
 }

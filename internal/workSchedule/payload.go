@@ -2,32 +2,28 @@ package workschedule
 
 import (
 	"demo/purpleSchool/configs"
+	"demo/purpleSchool/internal/auth"
+	"demo/purpleSchool/pkg/db"
+
+	"gorm.io/gorm"
 )
 
 type WorkScheduleDeps struct {
 	*configs.Config
+	ScheduleRepository *ScheduleRepository
+	AuthHandler        *auth.AuthHandler
 }
 type WorkScheduleHandler struct {
 	*configs.Config
 }
-type GetWorkScheduleForMonthRequest struct {
-	Token              string `json:"token" validate:"required"`
-	Id                 string `json:"id" validate:"required"`
-	StartMonthSchedule int    `json:"startMonthSchedule"`
-	StartYearSchedule  int    `json:"startYearSchedule"`
+type ScheduleRepository struct {
+	DataBase *db.Db
 }
 
-type GetWorkScheduleForMonthResponse struct {
-	StartDay     int                   `json:"startDay"`
-	StartMonth   int                   `json:"startMonth"`
-	StartYear    int                   `json:"startYear"`
-	EndDay       int                   `json:"endDay"`
-	EndMonth     int                   `json:"endMonth"`
-	EndYear      int                   `json:"endYear"`
-	WorkSchedule []IWorkScheduleForDay `json:"workSchedule"`
-}
 type IWorkScheduleForDay struct {
+	gorm.Model
 	Id         string `json:"id"`
+	EmployeeId string `json:"employeeId"`
 	StartHour  int    `json:"startHour"`
 	StartDay   int    `json:"startDay"`
 	StartMonth int    `json:"startMonth"`
@@ -40,6 +36,7 @@ type IWorkScheduleForDay struct {
 
 type updateWorkScheduleRequest struct {
 	Token      string `json:"token" validate:"required"`
+	EmployeeId string `json:"employeeId"`
 	Id         string `json:"id"`
 	StartHour  int    `json:"startHour"`
 	StartDay   int    `json:"startDay"`

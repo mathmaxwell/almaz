@@ -25,10 +25,10 @@ func main() {
 		Config:         conf,
 		AuthRepository: authRepo,
 	})
-
 	//employees
 	employeeRepo := employees.NewEmployeeRepository(database)
-	database.AutoMigrate(&employees.IEmployeesResponse{})
+	database.AutoMigrate(&employees.Employee{})
+	database.AutoMigrate(&employees.EmployeeStatus{})
 	employees.NewEmployeeHandler(router, employees.EmployeeshandlerDeps{
 		Config:             conf,
 		EmployeeRepository: employeeRepo,
@@ -36,8 +36,12 @@ func main() {
 	})
 
 	//work schedule
+	scheduleRepo := workschedule.NewScheduleRepository(database)
+	database.AutoMigrate(&employees.IWorkScheduleForDay{})
 	workschedule.NewWorkScheduleHandler(router, workschedule.WorkScheduleDeps{
-		Config: conf,
+		Config:             conf,
+		ScheduleRepository: scheduleRepo,
+		AuthHandler:        authHandler,
 	})
 
 	//message
