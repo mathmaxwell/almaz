@@ -23,5 +23,5 @@ func main() {
 	db.AutoMigrate(&auth.LoginResponse{})
 	db.AutoMigrate(&employees.Employee{})
 	db.AutoMigrate(&employees.EmployeeStatus{})
-	db.AutoMigrate(&workschedule.IWorkScheduleForDay{})
+	db.AutoMigrate(&workschedule.ScheduleForDay{})
 }

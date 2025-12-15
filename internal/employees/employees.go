@@ -1,6 +1,7 @@
 package employees
 
 import (
+	workschedule "demo/purpleSchool/internal/workSchedule"
 	"demo/purpleSchool/pkg/db"
 	"demo/purpleSchool/pkg/fields"
 	"demo/purpleSchool/pkg/files"
@@ -380,8 +381,8 @@ func (handler *EmployeesHandler) getLateEmployeesById() http.HandlerFunc {
 			return
 		}
 		//ищет за тех дней кто опоздал и сколько опоздал, график работы
-		var data []ITardinessHistory
-		data1 := ITardinessHistory{
+		var data []workschedule.ITardinessHistory
+		data1 := workschedule.ITardinessHistory{
 			Date:        time.Now().AddDate(0, 0, 0),
 			Id:          "Abdurahim Id",
 			FullName:    "Abdurahim",
@@ -399,7 +400,7 @@ func (handler *EmployeesHandler) getLateEmployeesById() http.HandlerFunc {
 			ExitDay:     1,
 			ExitMonth:   body.Start_month,
 			ExitYear:    body.Start_year,
-			WorkSchedule: IWorkScheduleForDay{
+			WorkSchedule: workschedule.ScheduleForDay{
 				StartHour:  9,
 				StartDay:   1,
 				StartMonth: body.Start_month,
@@ -410,7 +411,7 @@ func (handler *EmployeesHandler) getLateEmployeesById() http.HandlerFunc {
 				EndYear:    body.Start_year,
 			},
 		}
-		data2 := ITardinessHistory{
+		data2 := workschedule.ITardinessHistory{
 			Date:        time.Now().AddDate(0, 0, 0),
 			Id:          "Abdurahim Id",
 			FullName:    "Abdurahim",
@@ -428,7 +429,7 @@ func (handler *EmployeesHandler) getLateEmployeesById() http.HandlerFunc {
 			ExitDay:     2,
 			ExitMonth:   body.Start_month,
 			ExitYear:    body.Start_year,
-			WorkSchedule: IWorkScheduleForDay{
+			WorkSchedule: workschedule.ScheduleForDay{
 				StartHour:  9,
 				StartDay:   2,
 				StartMonth: body.Start_month,
@@ -439,7 +440,7 @@ func (handler *EmployeesHandler) getLateEmployeesById() http.HandlerFunc {
 				EndYear:    body.Start_year,
 			},
 		}
-		data3 := ITardinessHistory{
+		data3 := workschedule.ITardinessHistory{
 			Date:        time.Now().AddDate(0, 0, 0),
 			Id:          "Abdurahim Id",
 			FullName:    "Abdurahim",
@@ -457,7 +458,7 @@ func (handler *EmployeesHandler) getLateEmployeesById() http.HandlerFunc {
 			ExitDay:     3,
 			ExitMonth:   body.Start_month,
 			ExitYear:    body.Start_year,
-			WorkSchedule: IWorkScheduleForDay{
+			WorkSchedule: workschedule.ScheduleForDay{
 				StartHour:  9,
 				StartDay:   2,
 				StartMonth: body.Start_month,
@@ -468,7 +469,7 @@ func (handler *EmployeesHandler) getLateEmployeesById() http.HandlerFunc {
 				EndYear:    body.Start_year,
 			},
 		}
-		data4 := ITardinessHistory{
+		data4 := workschedule.ITardinessHistory{
 			Date:        time.Now().AddDate(0, 0, 0),
 			Id:          "Abdurahim Id",
 			FullName:    "Abdurahim",
@@ -486,7 +487,7 @@ func (handler *EmployeesHandler) getLateEmployeesById() http.HandlerFunc {
 			ExitDay:     4,
 			ExitMonth:   body.Start_month,
 			ExitYear:    body.Start_year,
-			WorkSchedule: IWorkScheduleForDay{
+			WorkSchedule: workschedule.ScheduleForDay{
 				StartHour:  9,
 				StartDay:   2,
 				StartMonth: body.Start_month,
@@ -514,8 +515,8 @@ func (handler *EmployeesHandler) getLateEmployees() http.HandlerFunc {
 			return
 		}
 		//ищет за тех дней кто опоздал и сколько опоздал, график работы
-		var data []ITardinessHistory
-		data1 := ITardinessHistory{
+		var data []workschedule.ITardinessHistory
+		data1 := workschedule.ITardinessHistory{
 			Date:        time.Now().AddDate(0, 0, 0),
 			Id:          "Abdurahim Id",
 			FullName:    "Abdurahim",
@@ -533,7 +534,7 @@ func (handler *EmployeesHandler) getLateEmployees() http.HandlerFunc {
 			ExitDay:     body.Start_day,
 			ExitMonth:   body.Start_month,
 			ExitYear:    body.Start_year,
-			WorkSchedule: IWorkScheduleForDay{
+			WorkSchedule: workschedule.ScheduleForDay{
 				StartHour:  9,
 				StartDay:   body.Start_day,
 				StartMonth: body.Start_month,
@@ -544,7 +545,7 @@ func (handler *EmployeesHandler) getLateEmployees() http.HandlerFunc {
 				EndYear:    body.Start_year,
 			},
 		}
-		data2 := ITardinessHistory{
+		data2 := workschedule.ITardinessHistory{
 			Date:        time.Now().AddDate(0, 0, 0),
 			Id:          "employes Id",
 			FullName:    "employes",
@@ -562,7 +563,7 @@ func (handler *EmployeesHandler) getLateEmployees() http.HandlerFunc {
 			ExitDay:     body.Start_day,
 			ExitMonth:   body.Start_month,
 			ExitYear:    body.Start_year,
-			WorkSchedule: IWorkScheduleForDay{
+			WorkSchedule: workschedule.ScheduleForDay{
 				StartHour:  9,
 				StartDay:   body.Start_day,
 				StartMonth: body.Start_month,

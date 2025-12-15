@@ -37,7 +37,7 @@ func main() {
 
 	//work schedule
 	scheduleRepo := workschedule.NewScheduleRepository(database)
-	database.AutoMigrate(&employees.IWorkScheduleForDay{})
+	database.AutoMigrate(&workschedule.ScheduleForDay{})
 	workschedule.NewWorkScheduleHandler(router, workschedule.WorkScheduleDeps{
 		Config:             conf,
 		ScheduleRepository: scheduleRepo,
