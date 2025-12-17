@@ -11,7 +11,6 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
-	"strconv"
 
 	"gorm.io/gorm"
 )
@@ -50,9 +49,9 @@ func (handler *EmployeesHandler) createEmployees() http.HandlerFunc {
 			res.Json(w, "user is not found", 401)
 			return
 		}
-		var Accepted bool = false
+		var Accepted string = "false"
 		if user.UserRole == 1 {
-			Accepted = true
+			Accepted = "true"
 		}
 		var token string = token.CreateId()
 		if user.UserRole != 1 {
@@ -126,44 +125,81 @@ func (handler *EmployeesHandler) getEmployees() http.HandlerFunc {
 			res.Json(w, err.Error(), 400)
 			return
 		}
-		user, err := handler.AuthHandler.GetUserByToken(body.Token)
-		if err != nil {
-			res.Json(w, "user is not found", 401)
-			return
-		}
-		if user.UserRole != 1 {
-			res.Json(w, "you are not admin", 403)
-			return
-		}
 		if body.Page <= 0 {
 			body.Page = 1
 		}
 		if body.Count <= 0 {
 			body.Count = 10
 		}
+		if body.Count > 100 {
+			body.Count = 100
+		}
 		offset := (body.Page - 1) * body.Count
+		query := handler.EmployeeRepository.DataBase.WithContext(r.Context())
+		if body.Gender != "" {
+			query = query.Where("gender ILIKE ?", "%"+body.Gender+"%")
+		}
+		if body.Passport_series_and_number != "" {
+			query = query.Where("passport_series_and_number ILIKE ?", "%"+body.Passport_series_and_number+"%")
+		}
+		if body.PINFL != "" {
+			query = query.Where("PINFL = ?", body.PINFL)
+		}
+		if body.Full_name != "" {
+			query = query.Where("full_name ILIKE ?", "%"+body.Full_name+"%")
+		}
+		if body.Department != "" {
+			query = query.Where("department ILIKE ?", "%"+body.Department+"%")
+		}
+		if body.Position != "" {
+			query = query.Where("position ILIKE ?", "%"+body.Position+"%")
+		}
+		if body.Date_of_birth != "" {
+			query = query.Where("date_of_birth = ?", body.Date_of_birth)
+		}
+		if body.Birth_month != "" {
+			query = query.Where("birth_month = ?", body.Birth_month)
+		}
+		if body.Year_of_birth != "" {
+			query = query.Where("year_of_birth = ?", body.Year_of_birth)
+		}
+		if body.Place_of_birth != "" {
+			query = query.Where("place_of_birth ILIKE ?", "%"+body.Place_of_birth+"%")
+		}
+		if body.Nationality != "" {
+			query = query.Where("nationality ILIKE ?", "%"+body.Nationality+"%")
+		}
+		allowedFields := map[string]string{
+			"full_name":                  "full_name",
+			"department":                 "department",
+			"position":                   "position",
+			"gender":                     "gender",
+			"passport_series_and_number": "passport_series_and_number",
+			"PINFL":                      "PINFL",
+			"place_of_birth":             "place_of_birth",
+			"nationality":                "nationality",
+		}
 		sortOrder := "ASC"
 		if !body.SortAsc {
 			sortOrder = "DESC"
 		}
-		orderClause := ""
 		if body.SortField == "date_of_birth" {
-			orderClause = fmt.Sprintf(
-				"make_date(year_of_birth::int, birth_month::int, date_of_birth::int) %s",
+			orderClause := fmt.Sprintf(
+				"MAKE_DATE(year_of_birth::int, birth_month::int, date_of_birth::int) %s",
 				sortOrder,
 			)
+			query = query.Order(orderClause)
 		} else {
 			sortField := "full_name"
-			if body.SortField != "" {
-				sortField = body.SortField
+			if field, ok := allowedFields[body.SortField]; ok {
+				sortField = field
 			}
-			orderClause = fmt.Sprintf("%s %s", sortField, sortOrder)
+			query = query.Order(sortField + " " + sortOrder)
 		}
 		var employees []Employee
-		err = handler.EmployeeRepository.DataBase.
+		err = query.
 			Limit(body.Count).
 			Offset(offset).
-			Order(orderClause).
 			Find(&employees).Error
 		if err != nil {
 			res.Json(w, "failed to get employees", 500)
@@ -276,12 +312,6 @@ func (handler *EmployeesHandler) updateEmployees() http.HandlerFunc {
 			res.Json(w, "ID сотрудника обязателен", http.StatusBadRequest)
 			return
 		}
-		acceptedStr := r.FormValue("accepted")
-		accepted, err := strconv.ParseBool(acceptedStr)
-		if err != nil {
-			res.Json(w, "accepted должен быть true или false", http.StatusBadRequest)
-			return
-		}
 		var employee Employee
 		if err := handler.EmployeeRepository.DataBase.Where("id = ?", employeeId).First(&employee).Error; err != nil {
 			if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -317,7 +347,7 @@ func (handler *EmployeesHandler) updateEmployees() http.HandlerFunc {
 			Nationality:                fields.GetOrDefault(r.FormValue("nationality"), employee.Nationality),
 			Email:                      fields.GetOrDefault(r.FormValue("Email"), employee.Email),
 			Image:                      photoPath,
-			Accepted:                   accepted,
+			Accepted:                   fields.GetOrDefault(r.FormValue("accepted"), employee.Accepted),
 		}
 		if err := handler.EmployeeRepository.DataBase.Model(&employee).Updates(updatedEmployee).Error; err != nil {
 			res.Json(w, "не удалось обновить сотрудника", http.StatusInternalServerError)

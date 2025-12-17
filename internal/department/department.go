@@ -16,13 +16,14 @@ func NewDeportamentRepository(dataBase *db.Db) *DeportamentRepository {
 		DataBase: dataBase,
 	}
 }
-func NewDeportamentHandler(router *http.ServeMux, deps DepartmenthandlerDeps) {
+func NewDeportamentHandler(router *http.ServeMux, deps DepartmenthandlerDeps) *Departmenthandler {
 	handler := &Departmenthandler{
 		Config:                deps.Config,
 		DeportamentRepository: deps.DeportamentRepository,
 	}
 	router.HandleFunc("/department/createDepartment", handler.createDepartment())
 	router.HandleFunc("/department/getDepartment", handler.getDepartment())
+	return handler
 }
 func (handler *Departmenthandler) createDepartment() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
@@ -63,7 +64,6 @@ func (handler *Departmenthandler) createDepartment() http.HandlerFunc {
 		res.Json(w, newDeportament, 200)
 	}
 }
-
 func (handler *Departmenthandler) getDepartment() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		_, err := req.HandleBody[getDepartmentRequest](&w, r)

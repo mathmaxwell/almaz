@@ -26,7 +26,7 @@ type Employee struct {
 	Email                      string `json:"Email"`
 	Phone_number               string `json:"phone_number"`
 	Work_schedule              string `json:"work_schedule"`
-	Accepted                   bool   `json:"accepted"`
+	Accepted                   string `json:"accepted"`
 }
 type EmployeeStatus struct {
 	gorm.Model
@@ -86,11 +86,22 @@ type GetEmployeesByStatusResponse struct {
 }
 
 type GetEmployeesRequest struct {
-	Token     string `json:"token" validate:"required"`
-	Page      int    `json:"page"`
-	Count     int    `json:"count"`
-	SortField string `json:"sortField"`
-	SortAsc   bool   `json:"sortAsc"`
+	Token                      string `json:"token" validate:"required"`
+	Page                       int    `json:"page"`
+	Count                      int    `json:"count"`
+	SortField                  string `json:"sortField"`
+	SortAsc                    bool   `json:"sortAsc"`
+	Gender                     string `json:"gender"`
+	Passport_series_and_number string `json:"passport_series_and_number"`
+	PINFL                      string `json:"PINFL"`
+	Full_name                  string `json:"full_name"`
+	Department                 string `json:"department"`
+	Position                   string `json:"position"`
+	Date_of_birth              string `json:"date_of_birth"`
+	Birth_month                string `json:"birth_month"`
+	Year_of_birth              string `json:"year_of_birth"`
+	Place_of_birth             string `json:"place_of_birth"`
+	Nationality                string `json:"nationality"`
 }
 
 type GetLateEmployeesRequest struct {
