@@ -1,4 +1,4 @@
-module demo/purpleSchool
+module demo/almaz
 
 go 1.25.1
 

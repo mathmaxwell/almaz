@@ -8,12 +8,12 @@ import (
 	"time"
 )
 
-// change fileName, here fileName is employees
+// change fileName, here fileName is games
 func SaveFile(file multipart.File, header *multipart.FileHeader) (string, error) {
 	defer file.Close()
-	os.MkdirAll("uploads/employees", 0755)
+	os.MkdirAll("uploads/games", 0755)
 	timestamp := time.Now().Unix()
-	filename := fmt.Sprintf("uploads/employees/%d-%s", timestamp, header.Filename)
+	filename := fmt.Sprintf("uploads/games/%d-%s", timestamp, header.Filename)
 	out, err := os.Create(filename)
 	if err != nil {
 		return "", err
@@ -23,7 +23,7 @@ func SaveFile(file multipart.File, header *multipart.FileHeader) (string, error)
 	if err != nil {
 		return "", err
 	}
-	url := fmt.Sprintf("/uploads/employees/%d-%s", timestamp, header.Filename)
+	url := fmt.Sprintf("/uploads/games/%d-%s", timestamp, header.Filename)
 	return url, nil
 }
 func SaveRecord(file multipart.File, header *multipart.FileHeader) (string, error) {

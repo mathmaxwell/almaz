@@ -1,8 +1,7 @@
 package db
 
 import (
-	"demo/purpleSchool/configs"
-
+	"demo/almaz/configs"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 )

@@ -1,15 +1,12 @@
 package main
 
 import (
-	"demo/purpleSchool/configs"
-	"demo/purpleSchool/internal/auth"
-	"demo/purpleSchool/internal/department"
-	"demo/purpleSchool/internal/employees"
-	"demo/purpleSchool/internal/messages"
-	"demo/purpleSchool/internal/records"
-	workschedule "demo/purpleSchool/internal/workSchedule"
-	"demo/purpleSchool/pkg/cors"
-	"demo/purpleSchool/pkg/db"
+	"demo/almaz/configs"
+	"demo/almaz/internal/auth"
+	"demo/almaz/internal/games"
+	"demo/almaz/internal/offers"
+	"demo/almaz/pkg/cors"
+	"demo/almaz/pkg/db"
 	"net/http"
 )
 
@@ -26,47 +23,21 @@ func main() {
 		Config:         conf,
 		AuthRepository: authRepo,
 	})
-	//employees
-	employeeRepo := employees.NewEmployeeRepository(database)
-	database.AutoMigrate(&employees.Employee{})
-	database.AutoMigrate(&employees.EmployeeStatus{})
-	employeesHandler := employees.NewEmployeeHandler(router, employees.EmployeeshandlerDeps{
-		Config:             conf,
-		EmployeeRepository: employeeRepo,
-		AuthHandler:        authHandler,
+	//games
+	gamesRepo := games.NewGamesRepository(database)
+	database.AutoMigrate(&games.Games{})
+	games.NewGamesHandler(router, games.GameshandlerDeps{
+		Config:          conf,
+		GamesRepository: gamesRepo,
+		AuthHandler:     authHandler,
 	})
-
-	//work schedule
-	scheduleRepo := workschedule.NewScheduleRepository(database)
-	database.AutoMigrate(&workschedule.ScheduleForDay{})
-	workschedule.NewWorkScheduleHandler(router, workschedule.WorkScheduleDeps{
-		Config:             conf,
-		ScheduleRepository: scheduleRepo,
-		AuthHandler:        authHandler,
-	})
-
-	//messagex
-	messageRepo := messages.NewMessageRepository(database)
-	database.AutoMigrate(&messages.Message{})
-	messages.NewMessagesHandler(router, messages.MessagehandlerDeps{
-		Config:            conf,
-		MessageRepository: messageRepo,
-		AuthHandler:       authHandler,
-	})
-
-	//department
-	deportamentRepo := department.NewDeportamentRepository(database)
-	database.AutoMigrate(&department.Department{})
-	department.NewDeportamentHandler(router, department.DepartmenthandlerDeps{
-		Config:                conf,
-		DeportamentRepository: deportamentRepo,
-	})
-	recordRepo := records.NewRecordRepository(database)
-	database.AutoMigrate(&records.Record{})
-	records.NewRecordHandler(router, records.RecordhandlerDeps{
-		Config:             conf,
-		RecordRepository:   recordRepo,
-		EmployeeRepository: employeesHandler,
+	//offers
+	offersRepo := offers.NewOffersRepository(database)
+	database.AutoMigrate(&offers.Offers{})
+	offers.NewOffersHandler(router, offers.OffersshandlerDeps{
+		Config:           conf,
+		OffersRepository: offersRepo,
+		AuthHandler:      authHandler,
 	})
 	server := http.Server{
 		Addr:    ":8080",

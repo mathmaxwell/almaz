@@ -1,7 +1,7 @@
 package req
 
 import (
-	"demo/purpleSchool/pkg/res"
+	"demo/almaz/pkg/res"
 	"net/http"
 )
 

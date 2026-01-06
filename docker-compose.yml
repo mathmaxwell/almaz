@@ -1,13 +1,13 @@
 services:
   postgres:
-    container_name: localhost
     image: postgres:16.4
+    container_name: almaz-postgres
     environment:
-      POSTGRES_USER: abdurahim
-      POSTGRES_PASSWORD: qwerty1050
-      POSTGRES_DB: workers
-      PGDATA: /data/workers
+      POSTGRES_USER: almaz
+      POSTGRES_PASSWORD: almazpassword
+      POSTGRES_DB: almaz_db
+      PGDATA: /var/lib/postgresql/data
     volumes:
-      - ./postgres-data:/data/workers
+      - ./postgres-data:/var/lib/postgresql/data
     ports:
-      - '5433:5432'
+      - '5434:5432'

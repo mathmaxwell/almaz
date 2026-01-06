@@ -1,12 +1,9 @@
 package main
 
 import (
-	"demo/purpleSchool/internal/auth"
-	"demo/purpleSchool/internal/department"
-	"demo/purpleSchool/internal/employees"
-	"demo/purpleSchool/internal/messages"
-	"demo/purpleSchool/internal/records"
-	workschedule "demo/purpleSchool/internal/workSchedule"
+	"demo/almaz/internal/auth"
+	"demo/almaz/internal/games"
+	"demo/almaz/internal/offers"
 	"os"
 
 	"github.com/joho/godotenv"
@@ -23,11 +20,7 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	db.AutoMigrate(&auth.LoginResponse{})
-	db.AutoMigrate(&employees.Employee{})
-	db.AutoMigrate(&employees.EmployeeStatus{})
-	db.AutoMigrate(&workschedule.ScheduleForDay{})
-	db.AutoMigrate(&messages.Message{})
-	db.AutoMigrate(&department.Department{})
-	db.AutoMigrate(&records.Record{})
+	db.AutoMigrate(&auth.User{})
+	db.AutoMigrate(&games.Games{})
+	db.AutoMigrate(&offers.Offers{})
 }
