@@ -2,6 +2,7 @@ package main
 
 import (
 	"demo/almaz/configs"
+	"demo/almaz/internal/announcements"
 	"demo/almaz/internal/auth"
 	"demo/almaz/internal/games"
 	"demo/almaz/internal/offers"
@@ -38,6 +39,15 @@ func main() {
 		Config:           conf,
 		OffersRepository: offersRepo,
 		AuthHandler:      authHandler,
+	})
+
+	//announcements elonlar
+	announcementsRepo := announcements.NewOffersRepository(database)
+	database.AutoMigrate(&announcements.Announcements{})
+	announcements.NewOffersHandler(router, announcements.AnnouncementshandlerDeps{
+		Config:                  conf,
+		AnnouncementsRepository: announcementsRepo,
+		AuthHandler:             authHandler,
 	})
 	server := http.Server{
 		Addr:    ":8080",

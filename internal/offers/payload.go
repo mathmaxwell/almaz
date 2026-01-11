@@ -16,6 +16,8 @@ type OffersRepositoryDeps struct {
 
 type Offers struct {
 	Id     string `json:"id"`
+	GameId string `json:"gameId"`
+	BotId  string `json:"botId"`
 	Image  string `json:"image"`
 	UzName string `json:"uzName"`
 	RuName string `json:"ruName"`
@@ -42,7 +44,8 @@ type OffersshandlerDeps struct {
 	AuthHandler      *auth.AuthHandler
 }
 type GetOffersRequest struct {
-	Token string `json:"token"`
+	Token  string `json:"token"`
+	GameId string `json:"gameId"`
 }
 type DeleteOffersRequest struct {
 	Token string `json:"token"`

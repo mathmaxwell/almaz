@@ -1,6 +1,7 @@
 package main
 
 import (
+	"demo/almaz/internal/announcements"
 	"demo/almaz/internal/auth"
 	"demo/almaz/internal/games"
 	"demo/almaz/internal/offers"
@@ -23,4 +24,5 @@ func main() {
 	db.AutoMigrate(&auth.User{})
 	db.AutoMigrate(&games.Games{})
 	db.AutoMigrate(&offers.Offers{})
+	db.AutoMigrate(&announcements.Announcements{})
 }

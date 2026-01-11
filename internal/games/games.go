@@ -12,9 +12,6 @@ import (
 	"gorm.io/gorm"
 )
 
-// const apiUrl = import.meta.env.VITE_API_URL
-// `${apiUrl}${emp.image}`
-// VITE_API_URL=https://cloddily-equilibristic-renna.ngrok-free.dev
 func NewGamesRepository(dataBase *db.Db) *GamesRepository {
 	return &GamesRepository{
 		DataBase: dataBase,
@@ -55,6 +52,16 @@ func (handler *GamesHandler) create() http.HandlerFunc {
 			res.Json(w, "failed to save image", http.StatusInternalServerError)
 			return
 		}
+		fileHelper, headerHelper, err := r.FormFile("helpImage")
+		if err != nil {
+			res.Json(w, "image is not found", 400)
+			return
+		}
+		photoPathHelper, err := files.SaveFile(fileHelper, headerHelper)
+		if err != nil {
+			res.Json(w, "failed to save image", http.StatusInternalServerError)
+			return
+		}
 		var gameId string
 		if r.FormValue("id") == "" {
 			gameId = token.CreateId()
@@ -62,11 +69,13 @@ func (handler *GamesHandler) create() http.HandlerFunc {
 			gameId = r.FormValue("id")
 		}
 		newGame := Games{
-			Id:    gameId,
-			Name:  r.FormValue("name"),
-			Image: photoPath,
+			Id:         gameId,
+			Name:       r.FormValue("name"),
+			HowToUseRu: r.FormValue("howToUseRu"),
+			HowToUseUz: r.FormValue("howToUseUz"),
+			Image:      photoPath,
+			HelpImage:  photoPathHelper,
 		}
-
 		if err := handler.GamesRepository.DataBase.Create(&newGame).Error; err != nil {
 			res.Json(w, "db error", 500)
 			return
@@ -83,7 +92,7 @@ func (handler *GamesHandler) getGames() http.HandlerFunc {
 		}
 		_, err = handler.AuthHandler.GetUserByToken(body.Token)
 		if err != nil {
-			res.Json(w, "user is not found", 400)
+			res.Json(w, err, 400)
 			return
 		}
 		var games []Games
@@ -132,10 +141,24 @@ func (handler *GamesHandler) updateGame() http.HandlerFunc {
 				return
 			}
 		}
+		photoPathHelper := game.HelpImage
+		fileHelper, headerHelper, err := r.FormFile("helpImage")
+		if err == nil && fileHelper != nil {
+			defer file.Close()
+			var saveErr error
+			photoPathHelper, saveErr = files.SaveFile(fileHelper, headerHelper)
+			if saveErr != nil {
+				res.Json(w, "не удалось сохранить изображение", http.StatusInternalServerError)
+				return
+			}
+		}
 		updateGame := Games{
-			Image: photoPath,
-			Name:  r.FormValue("name"),
-			Id:    r.FormValue("id"),
+			Image:      photoPath,
+			Name:       r.FormValue("name"),
+			Id:         r.FormValue("id"),
+			HowToUseRu: r.FormValue("howToUseRu"),
+			HowToUseUz: r.FormValue("howToUseUz"),
+			HelpImage:  photoPathHelper,
 		}
 		if err := handler.GamesRepository.DataBase.Model(&game).Updates(updateGame).Error; err != nil {
 			res.Json(w, "не удалось обновить сотрудника", http.StatusInternalServerError)

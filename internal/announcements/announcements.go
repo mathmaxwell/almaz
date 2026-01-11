@@ -1,4 +1,4 @@
-package offers
+package announcements
 
 import (
 	"demo/almaz/pkg/db"
@@ -11,27 +11,26 @@ import (
 	"net/http"
 )
 
-func NewOffersRepository(dataBase *db.Db) *OffersRepository {
-	return &OffersRepository{
+func NewOffersRepository(dataBase *db.Db) *AnnouncementsRepository {
+	return &AnnouncementsRepository{
 		DataBase: dataBase,
 	}
 }
-func NewOffersHandler(router *http.ServeMux, deps OffersshandlerDeps) *OffersHandler {
-	handler := &OffersHandler{
-		Config:           deps.Config,
-		OffersRepository: *deps.OffersRepository,
-		AuthHandler:      deps.AuthHandler,
+func NewOffersHandler(router *http.ServeMux, deps AnnouncementshandlerDeps) *AnnouncementsHandler {
+	handler := &AnnouncementsHandler{
+		Config:                  deps.Config,
+		AnnouncementsRepository: *deps.AnnouncementsRepository,
+		AuthHandler:             deps.AuthHandler,
 	}
-	router.HandleFunc("/offers/create", handler.create())
-	router.HandleFunc("/offers/getOffers", handler.getOffers())
-	router.HandleFunc("/offers/updateOffer", handler.updateOffer())
-	router.HandleFunc("/offers/deleteOffer", handler.deleteOffer())
+	router.HandleFunc("/announcements/create", handler.create())
+	router.HandleFunc("/announcements/getAnnouncements", handler.get())
+	router.HandleFunc("/announcements/update", handler.update())
+	router.HandleFunc("/announcements/delete", handler.delete())
 	return handler
 }
 
-func (handler *OffersHandler) create() http.HandlerFunc {
+func (handler *AnnouncementsHandler) create() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		//нужно(можно) id, чтоб было то что в боте, gameId
 		userToken := r.FormValue("token")
 		if userToken != handler.Config.Token.AdminToken {
 			res.Json(w, "you are not admin", 401)
@@ -51,33 +50,25 @@ func (handler *OffersHandler) create() http.HandlerFunc {
 			res.Json(w, "failed to save image", http.StatusInternalServerError)
 			return
 		}
-		var gameId string
-		if r.FormValue("id") == "" {
-			gameId = token.CreateId()
-		} else {
-			gameId = r.FormValue("id")
-		}
-		newGame := Offers{
-			Id:     gameId,
+
+		newAnnouncements := Announcements{
+			Id:     token.CreateId(),
 			Image:  photoPath,
-			GameId: r.FormValue("gameId"),
-			UzName: r.FormValue("uzName"),
-			RuName: r.FormValue("ruName"),
-			Price:  r.FormValue("price"),
-			RuDesc: r.FormValue("ruDesc"),
-			UzDesc: r.FormValue("uzDesc"),
-			BotId:  r.FormValue("botId"),
+			Uz:     r.FormValue("uz"),
+			Ru:     r.FormValue("ru"),
+			RuText: r.FormValue("ruText"),
+			UzText: r.FormValue("uzText"),
 		}
-		if err := handler.OffersRepository.DataBase.Create(&newGame).Error; err != nil {
+		if err := handler.AnnouncementsRepository.DataBase.Create(&newAnnouncements).Error; err != nil {
 			res.Json(w, "db error", 500)
 			return
 		}
-		res.Json(w, newGame, 200)
+		res.Json(w, newAnnouncements, 200)
 	}
 }
-func (handler *OffersHandler) getOffers() http.HandlerFunc {
+func (handler *AnnouncementsHandler) get() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		body, err := req.HandleBody[GetOffersRequest](&w, r)
+		body, err := req.HandleBody[GetAnnouncementsRequest](&w, r)
 		if err != nil {
 			res.Json(w, err.Error(), 400)
 			return
@@ -87,8 +78,8 @@ func (handler *OffersHandler) getOffers() http.HandlerFunc {
 			res.Json(w, "user is not found", 400)
 			return
 		}
-		var offers []Offers
-		err = handler.OffersRepository.DataBase.Model(&Offers{}).Where("game_id = ?", body.GameId).Find(&offers).Error
+		var offers []Announcements
+		err = handler.AnnouncementsRepository.DataBase.Model(&Announcements{}).Find(&offers).Error
 		if err != nil {
 			res.Json(w, "failed to get offers", 500)
 			return
@@ -96,7 +87,7 @@ func (handler *OffersHandler) getOffers() http.HandlerFunc {
 		res.Json(w, offers, 200)
 	}
 }
-func (handler *OffersHandler) updateOffer() http.HandlerFunc {
+func (handler *AnnouncementsHandler) update() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if err := r.ParseMultipartForm(10 << 20); err != nil {
 			res.Json(w, "не удалось разобрать форму", http.StatusBadRequest)
@@ -107,13 +98,13 @@ func (handler *OffersHandler) updateOffer() http.HandlerFunc {
 			res.Json(w, "доступ запрещён: требуется роль администратора", http.StatusForbidden)
 			return
 		}
-		gameId := r.FormValue("id")
-		if gameId == "" {
+		id := r.FormValue("id")
+		if id == "" {
 			res.Json(w, "ID игры обязателен", http.StatusBadRequest)
 			return
 		}
-		var offer Offers
-		if err := handler.OffersRepository.DataBase.Where("id = ?", gameId).First(&offer).Error; err != nil {
+		var announcement Announcements
+		if err := handler.AnnouncementsRepository.DataBase.Where("id = ?", id).First(&announcement).Error; err != nil {
 			if errors.Is(err, gorm.ErrRecordNotFound) {
 				res.Json(w, "offer is not found", http.StatusNotFound)
 			} else {
@@ -121,7 +112,7 @@ func (handler *OffersHandler) updateOffer() http.HandlerFunc {
 			}
 			return
 		}
-		photoPath := offer.Image
+		photoPath := announcement.Image
 		file, header, err := r.FormFile("image")
 		if err == nil && file != nil {
 			defer file.Close()
@@ -132,18 +123,15 @@ func (handler *OffersHandler) updateOffer() http.HandlerFunc {
 				return
 			}
 		}
-		updateOffer := Offers{
+		updateOffer := Announcements{
 			Image:  photoPath,
 			Id:     r.FormValue("id"),
-			GameId: r.FormValue("gameId"),
-			UzName: r.FormValue("uzName"),
-			RuName: r.FormValue("ruName"),
-			Price:  r.FormValue("price"),
-			RuDesc: r.FormValue("ruDesc"),
-			UzDesc: r.FormValue("uzDesc"),
-			BotId:  r.FormValue("botId"),
+			Uz:     r.FormValue("uz"),
+			Ru:     r.FormValue("ru"),
+			RuText: r.FormValue("ruText"),
+			UzText: r.FormValue("uzText"),
 		}
-		if err := handler.OffersRepository.DataBase.Model(&offer).Updates(updateOffer).Error; err != nil {
+		if err := handler.AnnouncementsRepository.DataBase.Model(&announcement).Updates(updateOffer).Error; err != nil {
 			res.Json(w, "не удалось обновить предложение", http.StatusInternalServerError)
 			return
 		}
@@ -153,9 +141,9 @@ func (handler *OffersHandler) updateOffer() http.HandlerFunc {
 		}, http.StatusOK)
 	}
 }
-func (handler *OffersHandler) deleteOffer() http.HandlerFunc {
+func (handler *AnnouncementsHandler) delete() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		body, err := req.HandleBody[DeleteOffersRequest](&w, r)
+		body, err := req.HandleBody[DeleteAnnouncementsRequest](&w, r)
 		if err != nil {
 			res.Json(w, err.Error(), 400)
 			return
@@ -169,8 +157,8 @@ func (handler *OffersHandler) deleteOffer() http.HandlerFunc {
 			res.Json(w, "you are not admin", 403)
 			return
 		}
-		db := handler.OffersRepository.DataBase
-		result := db.Delete(&Offers{}, "id = ?", body.Id)
+		db := handler.AnnouncementsRepository.DataBase
+		result := db.Delete(&Announcements{}, "id = ?", body.Id)
 		if result.Error != nil {
 			res.Json(w, result.Error.Error(), 500)
 			return
