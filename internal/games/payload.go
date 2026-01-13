@@ -21,6 +21,7 @@ type Games struct {
 	HowToUseUz string `json:"howToUseUz"`
 	HowToUseRu string `json:"howToUseRu"`
 	HelpImage  string `json:"helpImage"`
+	Place      string `json:"place"`
 }
 type User struct {
 	Login    string `gorm:"unique" json:"login"`

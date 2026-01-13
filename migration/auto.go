@@ -1,10 +1,12 @@
 package main
 
 import (
+	"demo/almaz/internal/admincart"
 	"demo/almaz/internal/announcements"
 	"demo/almaz/internal/auth"
 	"demo/almaz/internal/games"
 	"demo/almaz/internal/offers"
+	"demo/almaz/internal/payment"
 	"os"
 
 	"github.com/joho/godotenv"
@@ -25,4 +27,6 @@ func main() {
 	db.AutoMigrate(&games.Games{})
 	db.AutoMigrate(&offers.Offers{})
 	db.AutoMigrate(&announcements.Announcements{})
+	db.AutoMigrate(&admincart.Admincart{})
+	db.AutoMigrate(&payment.Payment{})
 }

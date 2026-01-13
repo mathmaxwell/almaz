@@ -2,10 +2,12 @@ package main
 
 import (
 	"demo/almaz/configs"
+	"demo/almaz/internal/admincart"
 	"demo/almaz/internal/announcements"
 	"demo/almaz/internal/auth"
 	"demo/almaz/internal/games"
 	"demo/almaz/internal/offers"
+	"demo/almaz/internal/payment"
 	"demo/almaz/pkg/cors"
 	"demo/almaz/pkg/db"
 	"net/http"
@@ -48,6 +50,22 @@ func main() {
 		Config:                  conf,
 		AnnouncementsRepository: announcementsRepo,
 		AuthHandler:             authHandler,
+	})
+	//admin cards
+	admincardRepo := admincart.NewAdmincartRepository(database)
+	database.AutoMigrate(&admincart.Admincart{})
+	admincart.NewAdmincartHandler(router, admincart.AdmincarthandlerDeps{
+		Config:              conf,
+		AdmincartRepository: admincardRepo,
+		AuthHandler:         authHandler,
+	})
+	//Payment
+	paymentRepo := payment.NewPaymentRepository(database)
+	database.AutoMigrate(&payment.Payment{})
+	payment.NewPaymentHandler(router, payment.PaymenthandlerDeps{
+		Config:            conf,
+		PaymentRepository: paymentRepo,
+		AuthHandler:       authHandler,
 	})
 	server := http.Server{
 		Addr:    ":8080",

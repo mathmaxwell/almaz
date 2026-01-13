@@ -71,6 +71,7 @@ func (handler *GamesHandler) create() http.HandlerFunc {
 		newGame := Games{
 			Id:         gameId,
 			Name:       r.FormValue("name"),
+			Place:      r.FormValue("place"),
 			HowToUseRu: r.FormValue("howToUseRu"),
 			HowToUseUz: r.FormValue("howToUseUz"),
 			Image:      photoPath,
@@ -159,6 +160,7 @@ func (handler *GamesHandler) updateGame() http.HandlerFunc {
 			HowToUseRu: r.FormValue("howToUseRu"),
 			HowToUseUz: r.FormValue("howToUseUz"),
 			HelpImage:  photoPathHelper,
+			Place:      r.FormValue("place"),
 		}
 		if err := handler.GamesRepository.DataBase.Model(&game).Updates(updateGame).Error; err != nil {
 			res.Json(w, "не удалось обновить сотрудника", http.StatusInternalServerError)
