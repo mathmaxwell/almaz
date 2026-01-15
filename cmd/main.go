@@ -8,6 +8,7 @@ import (
 	"demo/almaz/internal/games"
 	"demo/almaz/internal/offers"
 	"demo/almaz/internal/payment"
+	"demo/almaz/internal/transactions"
 	"demo/almaz/pkg/cors"
 	"demo/almaz/pkg/db"
 	"net/http"
@@ -66,6 +67,14 @@ func main() {
 		Config:            conf,
 		PaymentRepository: paymentRepo,
 		AuthHandler:       authHandler,
+	})
+	//transactions
+	transactionsRepo := transactions.NewTransactionRepository(database)
+	database.AutoMigrate(&transactions.Transaction{})
+	transactions.NewTranactionHandler(router, &transactions.TransactionhandlerDeps{
+		Config:                conf,
+		TransactionRepository: transactionsRepo,
+		AuthHandler:           authHandler,
 	})
 	server := http.Server{
 		Addr:    ":8080",
