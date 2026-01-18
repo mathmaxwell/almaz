@@ -7,6 +7,8 @@ import (
 	"demo/almaz/pkg/token"
 	"net/http"
 	"time"
+
+	"gorm.io/gorm"
 )
 
 func NewTransactionRepository(dataBase *db.Db) *TransactionRepository {
@@ -34,9 +36,7 @@ func (handler *TransactionHandler) create() http.HandlerFunc {
 			res.Json(w, err, 400)
 			return
 		}
-
 		now := time.Now()
-
 		tx := Transaction{
 			Id:        token.CreateId(),
 			UserId:    body.UserId,
@@ -50,15 +50,31 @@ func (handler *TransactionHandler) create() http.HandlerFunc {
 			DonatName: body.DonatName,
 			CreatedBy: body.CreatedBy,
 		}
-
 		if err := handler.TransactionRepository.DataBase.Create(&tx).Error; err != nil {
+			res.Json(w, err, 500)
+			return
+		}
+		var user User
+		err = handler.TransactionRepository.DataBase.
+			Where("token = ?", body.UserId).
+			First(&user).Error
+		if err != nil {
+			res.Json(w, err, 404)
+			return
+		}
+		err = handler.TransactionRepository.DataBase.
+			Model(&User{}).
+			Where("token = ?", body.UserId).
+			Update("balance", gorm.Expr("balance + ?", body.Price)).
+			Error
+
+		if err != nil {
 			res.Json(w, err, 500)
 			return
 		}
 		res.Json(w, tx, 200)
 	}
 }
-
 func (handler *TransactionHandler) getAll() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		body, err := req.HandleBody[getRequest](&w, r)
@@ -78,7 +94,6 @@ func (handler *TransactionHandler) getAll() http.HandlerFunc {
 		res.Json(w, txs, 200)
 	}
 }
-
 func (handler *TransactionHandler) delete() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		body, err := req.HandleBody[deleteRequest](&w, r)

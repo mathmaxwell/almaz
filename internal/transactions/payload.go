@@ -7,20 +7,23 @@ import (
 )
 
 type Transaction struct {
-	Id     string `json:"id"`
-	UserId string `json:"userId"`
-	Price  int    `json:"price"`
-
-	Year   int `json:"year"`
-	Month  int `json:"month"`
-	Day    int `json:"day"`
-	Hour   int `json:"hour"`
-	Minute int `json:"minute"`
-
+	Id        string `json:"id"`
+	UserId    string `json:"userId"`
+	Price     int    `json:"price"`
+	Year      int    `json:"year"`
+	Month     int    `json:"month"`
+	Day       int    `json:"day"`
+	Hour      int    `json:"hour"`
+	Minute    int    `json:"minute"`
 	GameName  string `json:"gameName"`
 	DonatName string `json:"donatName"`
-
 	CreatedBy string `json:"createdBy"` // system | admin | gateway
+}
+type User struct {
+	Login    string `gorm:"unique" json:"login"`
+	Password string `json:"password"`
+	Token    string `json:"token"`
+	Balance  int    `json:"balance"`
 }
 type TransactionhandlerDeps struct {
 	*configs.Config

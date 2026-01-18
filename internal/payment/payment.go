@@ -1,7 +1,5 @@
 package payment
 
-import "time"
-
 import (
 	"demo/almaz/pkg/db"
 	"demo/almaz/pkg/req"
@@ -9,6 +7,9 @@ import (
 	"demo/almaz/pkg/token"
 	"fmt"
 	"net/http"
+	"time"
+
+	"gorm.io/gorm"
 )
 
 func NewPaymentRepository(dataBase *db.Db) *PaymentRepository {
@@ -220,7 +221,44 @@ func (handler *PaymentHandler) updatePayment() http.HandlerFunc {
 			res.Json(w, err, 500)
 			return
 		}
-		res.Json(w, payment, 200)
+		now := time.Now()
+		tx := Transaction{
+			Id:        token.CreateId(),
+			UserId:    body.UserId,
+			Price:     payment.Price,
+			Year:      now.Year(),
+			Month:     int(now.Month()),
+			Day:       now.Day(),
+			Hour:      now.Hour(),
+			Minute:    now.Minute(),
+			GameName:  "-",
+			DonatName: "-",
+			CreatedBy: "admin",
+		}
+		var user User
+		err = handler.PaymentRepository.DataBase.
+			Where("token = ?", body.UserId).
+			First(&user).Error
+		if err != nil {
+			res.Json(w, err, 404)
+			return
+		}
+
+		err = handler.PaymentRepository.DataBase.
+			Model(&User{}).
+			Where("token = ?", body.UserId).
+			Update("balance", gorm.Expr("balance + ?", payment.Price)).
+			Error
+
+		if err != nil {
+			res.Json(w, err, 500)
+			return
+		}
+		if err := handler.PaymentRepository.DataBase.Create(&tx).Error; err != nil {
+			res.Json(w, err, 500)
+			return
+		}
+		res.Json(w, tx, 200)
 	}
 }
 func (handler *PaymentHandler) deletePayment() http.HandlerFunc {
