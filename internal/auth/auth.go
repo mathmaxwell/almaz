@@ -7,6 +7,8 @@ import (
 	"demo/almaz/pkg/token"
 	"errors"
 	"net/http"
+
+	"gorm.io/gorm"
 )
 
 func NewUserRepository(dataBase *db.Db) *AuthRepository {
@@ -26,6 +28,18 @@ func NewAuthHandler(router *http.ServeMux, deps AuthhandlerDeps) *AuthHandler {
 func (handler *AuthHandler) GetUserByToken(token string) (User, error) {
 	var user User
 	err := handler.AuthRepository.DataBase.Where("token = ?", token).First(&user).Error
+	if err != nil {
+		return user, errors.New("user is not found")
+	}
+	return user, nil
+}
+func (handler *AuthHandler) UpdateBalance(token string, newPrice int) (User, error) {
+	var user User
+	err := handler.AuthRepository.DataBase.
+		Model(&User{}).
+		Where("token = ?", token).
+		Update("balance", gorm.Expr("balance + ?", newPrice)).
+		Error
 	if err != nil {
 		return user, errors.New("user is not found")
 	}

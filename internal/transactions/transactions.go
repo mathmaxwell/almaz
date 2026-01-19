@@ -7,8 +7,6 @@ import (
 	"demo/almaz/pkg/token"
 	"net/http"
 	"time"
-
-	"gorm.io/gorm"
 )
 
 func NewTransactionRepository(dataBase *db.Db) *TransactionRepository {
@@ -16,7 +14,6 @@ func NewTransactionRepository(dataBase *db.Db) *TransactionRepository {
 		DataBase: dataBase,
 	}
 }
-
 func NewTranactionHandler(router *http.ServeMux, deps *TransactionhandlerDeps) *TransactionHandler {
 	handler := &TransactionHandler{
 		Config:                deps.Config,
@@ -54,20 +51,7 @@ func (handler *TransactionHandler) create() http.HandlerFunc {
 			res.Json(w, err, 500)
 			return
 		}
-		var user User
-		err = handler.TransactionRepository.DataBase.
-			Where("token = ?", body.UserId).
-			First(&user).Error
-		if err != nil {
-			res.Json(w, err, 404)
-			return
-		}
-		err = handler.TransactionRepository.DataBase.
-			Model(&User{}).
-			Where("token = ?", body.UserId).
-			Update("balance", gorm.Expr("balance + ?", body.Price)).
-			Error
-
+		_, err = handler.AuthHandler.UpdateBalance(body.UserId, body.Price)
 		if err != nil {
 			res.Json(w, err, 500)
 			return

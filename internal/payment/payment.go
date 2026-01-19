@@ -8,8 +8,6 @@ import (
 	"fmt"
 	"net/http"
 	"time"
-
-	"gorm.io/gorm"
 )
 
 func NewPaymentRepository(dataBase *db.Db) *PaymentRepository {
@@ -55,16 +53,20 @@ func (handler *PaymentHandler) getPayment() http.HandlerFunc {
 		var result []Payment
 		for _, p := range payments {
 			if isExpired(p) {
-				handler.PaymentRepository.DataBase.
+				err := handler.PaymentRepository.DataBase.
+					Model(&Payment{}).
 					Where("id = ?", p.Id).
-					Delete(&Payment{})
+					Update("is_working", false).Error
+				if err != nil {
+					res.Json(w, err, 500)
+					return
+				}
 				continue
 			}
 			result = append(result, p)
 		}
 
 		res.Json(w, result, 200)
-
 	}
 }
 func (handler *PaymentHandler) getPaymentByUser() http.HandlerFunc {
@@ -97,9 +99,7 @@ func (handler *PaymentHandler) getPaymentByUser() http.HandlerFunc {
 			}
 			result = append(result, p)
 		}
-
 		res.Json(w, result, 200)
-
 	}
 }
 func (handler *PaymentHandler) getAllPayment() http.HandlerFunc {
@@ -123,16 +123,19 @@ func (handler *PaymentHandler) getAllPayment() http.HandlerFunc {
 		var result []Payment
 		for _, p := range payments {
 			if isExpired(p) {
-				handler.PaymentRepository.DataBase.
+				err := handler.PaymentRepository.DataBase.
+					Model(&Payment{}).
 					Where("id = ?", p.Id).
-					Delete(&Payment{})
+					Update("is_working", false).Error
+				if err != nil {
+					res.Json(w, err, 500)
+					return
+				}
 				continue
 			}
 			result = append(result, p)
 		}
-
 		res.Json(w, result, 200)
-
 	}
 }
 func (handler *PaymentHandler) createPayment() http.HandlerFunc {
@@ -164,7 +167,10 @@ func (handler *PaymentHandler) createPayment() http.HandlerFunc {
 				return
 			}
 			if isExpired(p) {
-				tx.Where("id = ?", p.Id).Delete(&Payment{})
+				handler.PaymentRepository.DataBase.
+					Model(&Payment{}).
+					Where("id = ?", p.Id).
+					Update("is_working", false)
 				continue
 			}
 			if p.Price == body.Price {
@@ -235,20 +241,7 @@ func (handler *PaymentHandler) updatePayment() http.HandlerFunc {
 			DonatName: "-",
 			CreatedBy: "admin",
 		}
-		var user User
-		err = handler.PaymentRepository.DataBase.
-			Where("token = ?", body.UserId).
-			First(&user).Error
-		if err != nil {
-			res.Json(w, err, 404)
-			return
-		}
-
-		err = handler.PaymentRepository.DataBase.
-			Model(&User{}).
-			Where("token = ?", body.UserId).
-			Update("balance", gorm.Expr("balance + ?", payment.Price)).
-			Error
+		_, err = handler.AuthHandler.UpdateBalance(body.UserId, payment.Price)
 
 		if err != nil {
 			res.Json(w, err, 500)
@@ -260,7 +253,7 @@ func (handler *PaymentHandler) updatePayment() http.HandlerFunc {
 		}
 		res.Json(w, tx, 200)
 	}
-}
+} //works transactions
 func (handler *PaymentHandler) deletePayment() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		body, err := req.HandleBody[deletePaymentRequest](&w, r)
@@ -293,6 +286,6 @@ func (handler *PaymentHandler) createTelegram() http.HandlerFunc {
 			return
 		}
 		fmt.Println("body", body)
-		res.Json(w, body.Text, 200)
+		res.Json(w, body, 200)
 	}
-} //ishlamiydi hoizr
+} //works transactions. not finished

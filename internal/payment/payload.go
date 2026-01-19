@@ -75,9 +75,13 @@ type getPaymentRequest struct {
 	Token string `json:"token"`
 }
 type createPaymentTelegram struct {
-	Text   string `json:"text"`
-	Amount string `json:"amount"`
+	Amount int `json:"amount"`
 	Sender string `json:"sender"`
+	Year   int    `json:"year"`
+	Month  int    `json:"month"`
+	Day    int    `json:"day"`
+	Hour   int    `json:"hour"`
+	Minute int    `json:"minute"`
 }
 
 func isExpired(p Payment) bool {
@@ -91,6 +95,5 @@ func isExpired(p Payment) bool {
 		0,
 		time.Local,
 	)
-
 	return time.Since(created) >= 6*time.Minute
 }
