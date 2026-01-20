@@ -65,7 +65,6 @@ func (handler *PaymentHandler) getPayment() http.HandlerFunc {
 			}
 			result = append(result, p)
 		}
-
 		res.Json(w, result, 200)
 	}
 }
@@ -92,9 +91,14 @@ func (handler *PaymentHandler) getPaymentByUser() http.HandlerFunc {
 		var result []Payment
 		for _, p := range payments {
 			if isExpired(p) {
-				handler.PaymentRepository.DataBase.
+				err := handler.PaymentRepository.DataBase.
+					Model(&Payment{}).
 					Where("id = ?", p.Id).
-					Delete(&Payment{})
+					Update("is_working", false).Error
+				if err != nil {
+					res.Json(w, err, 500)
+					return
+				}
 				continue
 			}
 			result = append(result, p)
@@ -285,7 +289,118 @@ func (handler *PaymentHandler) createTelegram() http.HandlerFunc {
 			res.Json(w, err, 400)
 			return
 		}
-		fmt.Println("body", body)
-		res.Json(w, body, 200)
+
+		telegramTime := time.Date(
+			body.Year,
+			time.Month(body.Month),
+			body.Day,
+			body.Hour,
+			body.Minute,
+			0, 0, time.Local,
+		)
+
+		fromTime := telegramTime.Add(-48 * time.Hour)
+		toTime := telegramTime.Add(5 * time.Minute)
+
+		fromY, fromM, fromD := fromTime.Year(), int(fromTime.Month()), fromTime.Day()
+		toY, toM, toD := toTime.Year(), int(toTime.Month()), toTime.Day()
+		fromH, fromMin := fromTime.Hour(), fromTime.Minute()
+		toH, toMin := toTime.Hour(), toTime.Minute()
+
+		var payment Payment
+		err = handler.PaymentRepository.DataBase.
+			Where("price = ?", body.Amount).
+			Where(`(
+				(year > ?) OR 
+				(year = ? AND month > ?) OR 
+				(year = ? AND month = ? AND day > ?) OR 
+				(year = ? AND month = ? AND day = ? AND hour > ?) OR 
+				(year = ? AND month = ? AND day = ? AND hour = ? AND minute >= ?)
+			) AND (
+				(year < ?) OR 
+				(year = ? AND month < ?) OR 
+				(year = ? AND month = ? AND day < ?) OR 
+				(year = ? AND month = ? AND day = ? AND hour < ?) OR 
+				(year = ? AND month = ? AND day = ? AND hour = ? AND minute <= ?)
+			)`,
+				fromY, fromY, fromM, fromY, fromM, fromD, fromY, fromM, fromD, fromH, fromY, fromM, fromD, fromH, fromMin,
+				toY, toY, toM, toY, toM, toD, toY, toM, toD, toH, toY, toM, toD, toH, toMin,
+			).
+			Order("year DESC, month DESC, day DESC, hour DESC, minute DESC").
+			First(&payment).Error
+
+		if err != nil {
+			res.Json(w, map[string]string{"error": "no matching reservation found"}, 404)
+			return
+		}
+
+		// Проверяем, не обработана ли уже бронь
+		if !payment.IsWorking {
+			// Можно дополнительно проверить, есть ли уже транзакция по этой брони
+			var count int64
+			handler.PaymentRepository.DataBase.Model(&Transaction{}).
+				Where("payment_id = ?", payment.Id).
+				Count(&count)
+			if count > 0 {
+				res.Json(w, map[string]string{"error": "reservation already processed"}, 409)
+				return
+			}
+			// Если is_working = false, но транзакции нет — возможно админ вручную закрыл, но не начислил → продолжаем
+		}
+
+		// Всё в транзакции БД
+		txDb := handler.PaymentRepository.DataBase.Begin()
+		if txDb.Error != nil {
+			res.Json(w, txDb.Error, 500)
+			return
+		}
+
+		// Создаём транзакцию
+		transaction := Transaction{
+			Id:        token.CreateId(),
+			UserId:    payment.UserId,
+			Price:     body.Amount,
+			Year:      body.Year,
+			Month:     body.Month,
+			Day:       body.Day,
+			Hour:      body.Hour,
+			Minute:    body.Minute,
+			GameName:  "-",
+			DonatName: "-",
+			CreatedBy: body.Sender,
+		}
+
+		if err := txDb.Create(&transaction).Error; err != nil {
+			txDb.Rollback()
+			res.Json(w, err, 500)
+			return
+		}
+
+		// Начисляем баланс
+		_, err = handler.AuthHandler.UpdateBalance(payment.UserId, payment.Price)
+		if err != nil {
+			txDb.Rollback()
+			res.Json(w, err, 500)
+			return
+		}
+
+		// Закрываем бронь
+		if err := txDb.Model(&Payment{}).
+			Where("id = ?", payment.Id).
+			Update("is_working", false).Error; err != nil {
+			txDb.Rollback()
+			res.Json(w, err, 500)
+			return
+		}
+
+		txDb.Commit()
+
+		fmt.Println("Processed payment:", body.Amount, "for user:", payment.UserId, "at", telegramTime)
+		res.Json(w, map[string]string{
+			"status":         "success",
+			"user_id":        payment.UserId,
+			"amount":         fmt.Sprintf("%d", body.Amount),
+			"transaction_id": transaction.Id,
+		}, 200)
 	}
 } //works transactions. not finished

@@ -85,14 +85,12 @@ func (handler *TransactionHandler) delete() http.HandlerFunc {
 			res.Json(w, err, 400)
 			return
 		}
-
 		if err := handler.TransactionRepository.DataBase.
 			Where("id = ?", body.Id).
 			Delete(&Transaction{}).Error; err != nil {
 			res.Json(w, err, 500)
 			return
 		}
-
 		res.Json(w, map[string]string{"status": "deleted"}, 200)
 	}
 }

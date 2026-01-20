@@ -75,7 +75,7 @@ type getPaymentRequest struct {
 	Token string `json:"token"`
 }
 type createPaymentTelegram struct {
-	Amount int `json:"amount"`
+	Amount int    `json:"amount"`
 	Sender string `json:"sender"`
 	Year   int    `json:"year"`
 	Month  int    `json:"month"`
