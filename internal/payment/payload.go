@@ -75,13 +75,14 @@ type getPaymentRequest struct {
 	Token string `json:"token"`
 }
 type createPaymentTelegram struct {
-	Amount int    `json:"amount"`
-	Sender string `json:"sender"`
-	Year   int    `json:"year"`
-	Month  int    `json:"month"`
-	Day    int    `json:"day"`
-	Hour   int    `json:"hour"`
-	Minute int    `json:"minute"`
+	Amount     int    `json:"amount"`
+	Sender     string `json:"sender"`
+	Year       int    `json:"year"`
+	Month      int    `json:"month"`
+	Day        int    `json:"day"`
+	Hour       int    `json:"hour"`
+	Minute     int    `json:"minute"`
+	CardNumber string `json:"cardNumber"`
 }
 
 func isExpired(p Payment) bool {

@@ -18,6 +18,7 @@ type Admincart struct {
 	Id     string `json:"id"`
 	Name   string `json:"name"`
 	Number string `json:"number"`
+	Type   string `json:"type"`
 }
 type User struct {
 	Login    string `gorm:"unique" json:"login"`
@@ -44,12 +45,14 @@ type CreateAdmincartRequest struct {
 	Token  string `json:"token"`
 	Name   string `json:"name"`
 	Number string `json:"number"`
+	Type   string `json:"type"`
 }
 type UpdateAdmincartRequest struct {
 	Id     string `json:"id"`
 	Token  string `json:"token"`
 	Name   string `json:"name"`
 	Number string `json:"number"`
+	Type   string `json:"type"`
 }
 type DeleteAdmincartRequest struct {
 	Token string `json:"token"`

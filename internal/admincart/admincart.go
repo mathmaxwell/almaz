@@ -39,6 +39,7 @@ func (handler *AdmincartHandler) create() http.HandlerFunc {
 			Id:     token.CreateId(),
 			Name:   body.Name,
 			Number: body.Number,
+			Type:   body.Type,
 		}
 		if err := handler.AdmincartRepository.DataBase.Create(&newAdmincart).Error; err != nil {
 			res.Json(w, "db error", 500)

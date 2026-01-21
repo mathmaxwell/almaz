@@ -395,7 +395,7 @@ func (handler *PaymentHandler) createTelegram() http.HandlerFunc {
 
 		txDb.Commit()
 
-		fmt.Println("Processed payment:", body.Amount, "for user:", payment.UserId, "at", telegramTime)
+		fmt.Println("success", body)
 		res.Json(w, map[string]string{
 			"status":         "success",
 			"user_id":        payment.UserId,

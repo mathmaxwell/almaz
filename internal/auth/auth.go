@@ -22,7 +22,7 @@ func NewAuthHandler(router *http.ServeMux, deps AuthhandlerDeps) *AuthHandler {
 		AuthRepository: *deps.AuthRepository,
 	}
 	router.HandleFunc("/users/login", handler.login())
-	router.HandleFunc("/users/getBalance", handler.getBalance())
+	router.HandleFunc("/users/getUserById", handler.getUserById())
 	router.HandleFunc("/users/register", handler.register())
 	return handler
 }
@@ -65,14 +65,14 @@ func (handler *AuthHandler) login() http.HandlerFunc {
 		res.Json(w, user, 200)
 	}
 }
-func (handler *AuthHandler) getBalance() http.HandlerFunc {
+func (handler *AuthHandler) getUserById() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		body, err := req.HandleBody[GetBalanceRequest](&w, r)
 		if err != nil {
 			return
 		}
 		var user User
-		err = handler.AuthRepository.DataBase.Where("login = ?", body.UserId).First(&user).Error
+		err = handler.AuthRepository.DataBase.Where("token = ?", body.UserId).First(&user).Error
 		if err != nil {
 			res.Json(w, "user is not found", 400)
 			return
