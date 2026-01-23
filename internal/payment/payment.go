@@ -255,6 +255,10 @@ func (handler *PaymentHandler) updatePayment() http.HandlerFunc {
 			res.Json(w, err, 500)
 			return
 		}
+		if err := handler.PaymentRepository.DataBase.Delete(&payment).Error; err != nil {
+			res.Json(w, err, 500)
+			return
+		}
 		res.Json(w, tx, 200)
 	}
 } //works transactions
@@ -289,7 +293,6 @@ func (handler *PaymentHandler) createTelegram() http.HandlerFunc {
 			res.Json(w, err, 400)
 			return
 		}
-
 		telegramTime := time.Date(
 			body.Year,
 			time.Month(body.Month),
@@ -298,15 +301,12 @@ func (handler *PaymentHandler) createTelegram() http.HandlerFunc {
 			body.Minute,
 			0, 0, time.Local,
 		)
-
 		fromTime := telegramTime.Add(-48 * time.Hour)
 		toTime := telegramTime.Add(5 * time.Minute)
-
 		fromY, fromM, fromD := fromTime.Year(), int(fromTime.Month()), fromTime.Day()
 		toY, toM, toD := toTime.Year(), int(toTime.Month()), toTime.Day()
 		fromH, fromMin := fromTime.Hour(), fromTime.Minute()
 		toH, toMin := toTime.Hour(), toTime.Minute()
-
 		var payment Payment
 		err = handler.PaymentRepository.DataBase.
 			Where("price = ?", body.Amount).
@@ -333,10 +333,7 @@ func (handler *PaymentHandler) createTelegram() http.HandlerFunc {
 			res.Json(w, map[string]string{"error": "no matching reservation found"}, 404)
 			return
 		}
-
-		// Проверяем, не обработана ли уже бронь
 		if !payment.IsWorking {
-			// Можно дополнительно проверить, есть ли уже транзакция по этой брони
 			var count int64
 			handler.PaymentRepository.DataBase.Model(&Transaction{}).
 				Where("payment_id = ?", payment.Id).
@@ -345,17 +342,13 @@ func (handler *PaymentHandler) createTelegram() http.HandlerFunc {
 				res.Json(w, map[string]string{"error": "reservation already processed"}, 409)
 				return
 			}
-			// Если is_working = false, но транзакции нет — возможно админ вручную закрыл, но не начислил → продолжаем
 		}
-
-		// Всё в транзакции БД
 		txDb := handler.PaymentRepository.DataBase.Begin()
 		if txDb.Error != nil {
 			res.Json(w, txDb.Error, 500)
 			return
 		}
 
-		// Создаём транзакцию
 		transaction := Transaction{
 			Id:        token.CreateId(),
 			UserId:    payment.UserId,
@@ -375,8 +368,6 @@ func (handler *PaymentHandler) createTelegram() http.HandlerFunc {
 			res.Json(w, err, 500)
 			return
 		}
-
-		// Начисляем баланс
 		_, err = handler.AuthHandler.UpdateBalance(payment.UserId, payment.Price)
 		if err != nil {
 			txDb.Rollback()
@@ -384,15 +375,11 @@ func (handler *PaymentHandler) createTelegram() http.HandlerFunc {
 			return
 		}
 
-		// Закрываем бронь
-		if err := txDb.Model(&Payment{}).
-			Where("id = ?", payment.Id).
-			Update("is_working", false).Error; err != nil {
+		if err := txDb.Delete(&payment).Error; err != nil {
 			txDb.Rollback()
 			res.Json(w, err, 500)
 			return
 		}
-
 		txDb.Commit()
 
 		fmt.Println("success", body)
@@ -403,4 +390,4 @@ func (handler *PaymentHandler) createTelegram() http.HandlerFunc {
 			"transaction_id": transaction.Id,
 		}, 200)
 	}
-} //works transactions. not finished
+} //works transactions

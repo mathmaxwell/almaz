@@ -31,7 +31,6 @@ func NewOffersHandler(router *http.ServeMux, deps OffersshandlerDeps) *OffersHan
 
 func (handler *OffersHandler) create() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		//нужно(можно) id, чтоб было то что в боте, gameId
 		userToken := r.FormValue("token")
 		if userToken != handler.Config.Token.AdminToken {
 			res.Json(w, "you are not admin", 401)

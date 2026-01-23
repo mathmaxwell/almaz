@@ -32,7 +32,6 @@ func NewGamesHandler(router *http.ServeMux, deps GameshandlerDeps) *GamesHandler
 
 func (handler *GamesHandler) create() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		//нужно отправить image token, и нужно(можно) id, чтоб было то что в боте
 		userToken := r.FormValue("token")
 		if userToken != handler.Config.Token.AdminToken {
 			res.Json(w, "you are not admin", 401)
