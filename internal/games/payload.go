@@ -16,6 +16,7 @@ type GamesRepositoryDeps struct {
 
 type Games struct {
 	Id         string `json:"id"`
+	Video      string `json:"video"`
 	Name       string `json:"name"`
 	Image      string `json:"image"`
 	HowToUseUz string `json:"howToUseUz"`

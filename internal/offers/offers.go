@@ -43,17 +43,6 @@ func (handler *OffersHandler) create() http.HandlerFunc {
 			return
 		}
 
-		videoFile, videoHeader, videoErr := r.FormFile("video")
-		if videoErr != nil {
-			res.Json(w, "video is not found", 400)
-			return
-		}
-		videoPath, err := files.SaveFile(videoFile, videoHeader)
-		if err != nil {
-			res.Json(w, "failed to save video", http.StatusInternalServerError)
-			return
-		}
-
 		file, header, err := r.FormFile("image")
 		if err != nil {
 			res.Json(w, "image is not found", 400)
@@ -74,7 +63,7 @@ func (handler *OffersHandler) create() http.HandlerFunc {
 		newGame := Offers{
 			Id:     gameId,
 			Image:  photoPath,
-			Video:  videoPath,
+			Status: r.FormValue("status"),
 			GameId: r.FormValue("gameId"),
 			UzName: r.FormValue("uzName"),
 			RuName: r.FormValue("ruName"),
@@ -169,21 +158,10 @@ func (handler *OffersHandler) updateOffer() http.HandlerFunc {
 				return
 			}
 		}
-		//
-		videoPath := offer.Video
-		videoFile, videoHeader, videoErr := r.FormFile("video")
-		if videoErr == nil && file != nil {
-			defer file.Close()
-			var saveErr error
-			videoPath, saveErr = files.SaveFile(videoFile, videoHeader)
-			if saveErr != nil {
-				res.Json(w, "не удалось сохранить видео", http.StatusInternalServerError)
-				return
-			}
-		}
+
 		updateOffer := Offers{
 			Image:  photoPath,
-			Video:  videoPath,
+			Status: r.FormValue("status"),
 			Id:     r.FormValue("id"),
 			GameId: r.FormValue("gameId"),
 			UzName: r.FormValue("uzName"),

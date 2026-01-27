@@ -51,6 +51,16 @@ func (handler *GamesHandler) create() http.HandlerFunc {
 			res.Json(w, "failed to save image", http.StatusInternalServerError)
 			return
 		}
+		videoFile, videoHeader, videoErr := r.FormFile("video")
+		if videoErr != nil {
+			res.Json(w, "video is not found", 400)
+			return
+		}
+		videoPath, err := files.SaveFile(videoFile, videoHeader)
+		if err != nil {
+			res.Json(w, "failed to save video", http.StatusInternalServerError)
+			return
+		}
 		fileHelper, headerHelper, err := r.FormFile("helpImage")
 		if err != nil {
 			res.Json(w, "image is not found", 400)
@@ -69,6 +79,7 @@ func (handler *GamesHandler) create() http.HandlerFunc {
 		}
 		newGame := Games{
 			Id:         gameId,
+			Video:      videoPath,
 			Name:       r.FormValue("name"),
 			Place:      r.FormValue("place"),
 			HowToUseRu: r.FormValue("howToUseRu"),
@@ -152,7 +163,19 @@ func (handler *GamesHandler) updateGame() http.HandlerFunc {
 				return
 			}
 		}
+		videoPath := game.Video
+		videoFile, videoHeader, videoErr := r.FormFile("video")
+		if videoErr == nil && file != nil {
+			defer file.Close()
+			var saveErr error
+			videoPath, saveErr = files.SaveFile(videoFile, videoHeader)
+			if saveErr != nil {
+				res.Json(w, "не удалось сохранить видео", http.StatusInternalServerError)
+				return
+			}
+		}
 		updateGame := Games{
+			Video:      videoPath,
 			Image:      photoPath,
 			Name:       r.FormValue("name"),
 			Id:         r.FormValue("id"),
