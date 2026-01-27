@@ -20,9 +20,9 @@ func NewTranactionHandler(router *http.ServeMux, deps *TransactionhandlerDeps) *
 		TransactionRepository: *deps.TransactionRepository,
 		AuthHandler:           deps.AuthHandler,
 	}
-	router.HandleFunc("/transactions/create", handler.create())
-	router.HandleFunc("/transactions/get", handler.getAll())
-	router.HandleFunc("/transactions/delete", handler.delete())
+	router.HandleFunc("/transactions/transactionsCreate", handler.create())
+	router.HandleFunc("/transactions/transactionsGet", handler.getAll())
+	router.HandleFunc("/transactions/transactionsDelete", handler.delete())
 	return handler
 }
 

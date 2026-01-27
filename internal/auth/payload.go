@@ -39,3 +39,10 @@ type AuthRepository struct {
 type AuthRepositoryDeps struct {
 	DataBase *db.Db
 }
+type GetUsersRequest struct {
+	Page         int     `json:"page"`
+	Count        int     `json:"count"`
+	Login        *string `json:"login,omitempty"`
+	Token        *string `json:"token,omitempty"`
+	StartBalance *int    `json:"startBalance,omitempty"`
+}

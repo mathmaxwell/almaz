@@ -24,6 +24,7 @@ type Offers struct {
 	Price  string `json:"price"`
 	RuDesc string `json:"ruDesc"`
 	UzDesc string `json:"uzDesc"`
+	Video  string `json:"video"`
 }
 type User struct {
 	Login    string `gorm:"unique" json:"login"`

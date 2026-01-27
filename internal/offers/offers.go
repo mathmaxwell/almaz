@@ -24,6 +24,7 @@ func NewOffersHandler(router *http.ServeMux, deps OffersshandlerDeps) *OffersHan
 	}
 	router.HandleFunc("/offers/create", handler.create())
 	router.HandleFunc("/offers/getOffers", handler.getOffers())
+	router.HandleFunc("/offers/getOffersById", handler.getOffersById())
 	router.HandleFunc("/offers/updateOffer", handler.updateOffer())
 	router.HandleFunc("/offers/deleteOffer", handler.deleteOffer())
 	return handler
@@ -36,10 +37,23 @@ func (handler *OffersHandler) create() http.HandlerFunc {
 			res.Json(w, "you are not admin", 401)
 			return
 		}
-		if err := r.ParseMultipartForm(10 << 20); err != nil {
+
+		if err := r.ParseMultipartForm(200 << 20); err != nil {
 			res.Json(w, "failed to parse form", http.StatusBadRequest)
 			return
 		}
+
+		videoFile, videoHeader, videoErr := r.FormFile("video")
+		if videoErr != nil {
+			res.Json(w, "video is not found", 400)
+			return
+		}
+		videoPath, err := files.SaveFile(videoFile, videoHeader)
+		if err != nil {
+			res.Json(w, "failed to save video", http.StatusInternalServerError)
+			return
+		}
+
 		file, header, err := r.FormFile("image")
 		if err != nil {
 			res.Json(w, "image is not found", 400)
@@ -50,6 +64,7 @@ func (handler *OffersHandler) create() http.HandlerFunc {
 			res.Json(w, "failed to save image", http.StatusInternalServerError)
 			return
 		}
+
 		var gameId string
 		if r.FormValue("id") == "" {
 			gameId = token.CreateId()
@@ -59,6 +74,7 @@ func (handler *OffersHandler) create() http.HandlerFunc {
 		newGame := Offers{
 			Id:     gameId,
 			Image:  photoPath,
+			Video:  videoPath,
 			GameId: r.FormValue("gameId"),
 			UzName: r.FormValue("uzName"),
 			RuName: r.FormValue("ruName"),
@@ -95,9 +111,31 @@ func (handler *OffersHandler) getOffers() http.HandlerFunc {
 		res.Json(w, offers, 200)
 	}
 }
+func (handler *OffersHandler) getOffersById() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		body, err := req.HandleBody[DeleteOffersRequest](&w, r)
+		if err != nil {
+			res.Json(w, err.Error(), 400)
+			return
+		}
+		_, err = handler.AuthHandler.GetUserByToken(body.Token)
+		if err != nil {
+			res.Json(w, "user is not found", 400)
+			return
+		}
+		var offers Offers
+		err = handler.OffersRepository.DataBase.Where("id = ?", body.Id).First(&offers).Error
+
+		if err != nil {
+			res.Json(w, "failed to get offers", 500)
+			return
+		}
+		res.Json(w, offers, 200)
+	}
+}
 func (handler *OffersHandler) updateOffer() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		if err := r.ParseMultipartForm(10 << 20); err != nil {
+		if err := r.ParseMultipartForm(200 << 20); err != nil {
 			res.Json(w, "не удалось разобрать форму", http.StatusBadRequest)
 			return
 		}
@@ -131,8 +169,21 @@ func (handler *OffersHandler) updateOffer() http.HandlerFunc {
 				return
 			}
 		}
+		//
+		videoPath := offer.Video
+		videoFile, videoHeader, videoErr := r.FormFile("video")
+		if videoErr == nil && file != nil {
+			defer file.Close()
+			var saveErr error
+			videoPath, saveErr = files.SaveFile(videoFile, videoHeader)
+			if saveErr != nil {
+				res.Json(w, "не удалось сохранить видео", http.StatusInternalServerError)
+				return
+			}
+		}
 		updateOffer := Offers{
 			Image:  photoPath,
+			Video:  videoPath,
 			Id:     r.FormValue("id"),
 			GameId: r.FormValue("gameId"),
 			UzName: r.FormValue("uzName"),
