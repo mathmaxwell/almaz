@@ -244,9 +244,9 @@ func (handler *PaymentHandler) updatePayment() http.HandlerFunc {
 			GameName:  "-",
 			DonatName: "-",
 			CreatedBy: "admin",
+			Order:     "-",
 		}
 		_, err = handler.AuthHandler.UpdateBalance(body.UserId, payment.Price)
-
 		if err != nil {
 			res.Json(w, err, 500)
 			return
@@ -361,6 +361,7 @@ func (handler *PaymentHandler) createTelegram() http.HandlerFunc {
 			GameName:  "-",
 			DonatName: "-",
 			CreatedBy: body.Sender,
+			Order:     "-",
 		}
 
 		if err := txDb.Create(&transaction).Error; err != nil {
@@ -381,7 +382,6 @@ func (handler *PaymentHandler) createTelegram() http.HandlerFunc {
 			return
 		}
 		txDb.Commit()
-
 		fmt.Println("success", body)
 		res.Json(w, map[string]string{
 			"status":         "success",

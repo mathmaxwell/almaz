@@ -5,6 +5,7 @@ import (
 	"demo/almaz/internal/admincart"
 	"demo/almaz/internal/announcements"
 	"demo/almaz/internal/auth"
+	"demo/almaz/internal/buy"
 	"demo/almaz/internal/games"
 	"demo/almaz/internal/offers"
 	"demo/almaz/internal/payment"
@@ -84,6 +85,14 @@ func main() {
 		Config:              conf,
 		PromocodeRepository: promocodesRepo,
 		AuthHandler:         authHandler,
+	})
+	//buy
+	buyRepo := buy.NewBuyRepository(database)
+	database.AutoMigrate(&buy.Buy{})
+	buy.NewGamesHandler(router, &buy.BuyhandlerDeps{
+		Config:        conf,
+		BuyRepository: buyRepo,
+		AuthHandler:   authHandler,
 	})
 	server := http.Server{
 		Addr:    ":8080",

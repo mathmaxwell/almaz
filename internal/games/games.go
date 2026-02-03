@@ -7,9 +7,8 @@ import (
 	"demo/almaz/pkg/res"
 	"demo/almaz/pkg/token"
 	"errors"
-	"net/http"
-
 	"gorm.io/gorm"
+	"net/http"
 )
 
 func NewGamesRepository(dataBase *db.Db) *GamesRepository {
@@ -25,6 +24,7 @@ func NewGamesHandler(router *http.ServeMux, deps GameshandlerDeps) *GamesHandler
 	}
 	router.HandleFunc("/games/create", handler.create())
 	router.HandleFunc("/games/getGames", handler.getGames())
+	router.HandleFunc("/games/getGameById", handler.getGameById())
 	router.HandleFunc("/games/updateGame", handler.updateGame())
 	router.HandleFunc("/games/deleteGame", handler.deleteGame())
 	return handler
@@ -113,6 +113,31 @@ func (handler *GamesHandler) getGames() http.HandlerFunc {
 			return
 		}
 		res.Json(w, games, 200)
+	}
+}
+func (handler *GamesHandler) getGameById() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		body, err := req.HandleBody[DeleteGameRequest](&w, r)
+		if err != nil {
+			res.Json(w, err.Error(), 400)
+			return
+		}
+		_, err = handler.AuthHandler.GetUserByToken(body.Token)
+		if err != nil {
+			res.Json(w, "user is not found", 400)
+			return
+		}
+		var game Games
+		err = handler.GamesRepository.DataBase.Where("id = ?", body.Id).First(&game).Error
+		if err != nil {
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				res.Json(w, "game not found", 404)
+				return
+			}
+			res.Json(w, "failed to get game", 500)
+			return
+		}
+		res.Json(w, game, 200)
 	}
 }
 func (handler *GamesHandler) updateGame() http.HandlerFunc {

@@ -114,11 +114,15 @@ func (handler *OffersHandler) getOffersById() http.HandlerFunc {
 		}
 		var offers Offers
 		err = handler.OffersRepository.DataBase.Where("id = ?", body.Id).First(&offers).Error
-
 		if err != nil {
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				res.Json(w, "offer not found", 404)
+				return
+			}
 			res.Json(w, "failed to get offers", 500)
 			return
 		}
+
 		res.Json(w, offers, 200)
 	}
 }

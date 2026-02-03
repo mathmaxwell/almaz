@@ -18,6 +18,7 @@ type Transaction struct {
 	GameName  string `json:"gameName"`
 	DonatName string `json:"donatName"`
 	CreatedBy string `json:"createdBy"` // system | admin | gateway
+	Order     string `json:"order"`
 }
 type User struct {
 	Login    string `gorm:"unique" json:"login"`

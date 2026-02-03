@@ -46,6 +46,7 @@ func (handler *TransactionHandler) create() http.HandlerFunc {
 			GameName:  body.GameName,
 			DonatName: body.DonatName,
 			CreatedBy: body.CreatedBy,
+			Order: "-",
 		}
 		if err := handler.TransactionRepository.DataBase.Create(&tx).Error; err != nil {
 			res.Json(w, err, 500)

@@ -48,6 +48,23 @@ func (handler *AuthHandler) UpdateBalance(token string, newPrice int) (User, err
 	}
 	return user, nil
 }
+func (handler *AuthHandler) DecreaseBalance(userToken string, price int) error {
+	result := handler.AuthRepository.DataBase.
+		Model(&User{}).
+		Where("token = ? AND balance >= ?", userToken, price).
+		Update("balance", gorm.Expr("balance - ?", price))
+
+	if result.Error != nil {
+		return result.Error
+	}
+
+	if result.RowsAffected == 0 {
+		return errors.New("not enough balance")
+	}
+
+	return nil
+}
+
 func (handler *AuthHandler) login() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		body, err := req.HandleBody[LoginRequest](&w, r)
