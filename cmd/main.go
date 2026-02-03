@@ -8,6 +8,7 @@ import (
 	"demo/almaz/internal/games"
 	"demo/almaz/internal/offers"
 	"demo/almaz/internal/payment"
+	"demo/almaz/internal/promocode"
 	"demo/almaz/internal/transactions"
 	"demo/almaz/pkg/cors"
 	"demo/almaz/pkg/db"
@@ -75,6 +76,14 @@ func main() {
 		Config:                conf,
 		TransactionRepository: transactionsRepo,
 		AuthHandler:           authHandler,
+	})
+	//promocodes
+	promocodesRepo := promocode.NewPromocodesRepository(database)
+	database.AutoMigrate(&promocode.PromoCode{})
+	promocode.NewPromocodeHandler(router, &promocode.PromocodeshandlerDeps{
+		Config:              conf,
+		PromocodeRepository: promocodesRepo,
+		AuthHandler:         authHandler,
 	})
 	server := http.Server{
 		Addr:    ":8080",

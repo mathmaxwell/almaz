@@ -116,24 +116,27 @@ func (handler *GamesHandler) getGames() http.HandlerFunc {
 	}
 }
 func (handler *GamesHandler) updateGame() http.HandlerFunc {
-	//token id name image
 	return func(w http.ResponseWriter, r *http.Request) {
-		if err := r.ParseMultipartForm(10 << 20); err != nil {
+		if err := r.ParseMultipartForm(200 << 20); err != nil {
 			res.Json(w, "не удалось разобрать форму", http.StatusBadRequest)
 			return
 		}
 		userToken := r.FormValue("token")
 		if userToken != handler.Config.Token.AdminToken {
-			res.Json(w, "доступ запрещён: требуется роль администратора", http.StatusForbidden)
+			res.Json(w, "доступ запрещён", http.StatusForbidden)
 			return
 		}
+
 		gameId := r.FormValue("id")
 		if gameId == "" {
 			res.Json(w, "ID игры обязателен", http.StatusBadRequest)
 			return
 		}
+
 		var game Games
-		if err := handler.GamesRepository.DataBase.Where("id = ?", gameId).First(&game).Error; err != nil {
+		if err := handler.GamesRepository.DataBase.
+			Where("id = ?", gameId).
+			First(&game).Error; err != nil {
 			if errors.Is(err, gorm.ErrRecordNotFound) {
 				res.Json(w, "игра не найдена", http.StatusNotFound)
 			} else {
@@ -141,59 +144,80 @@ func (handler *GamesHandler) updateGame() http.HandlerFunc {
 			}
 			return
 		}
-		photoPath := game.Image
-		file, header, err := r.FormFile("image")
-		if err == nil && file != nil {
+
+		updates := map[string]interface{}{}
+		if file, header, err := r.FormFile("image"); err == nil {
 			defer file.Close()
-			var saveErr error
-			photoPath, saveErr = files.SaveFile(file, header)
-			if saveErr != nil {
+
+			path, err := files.SaveFile(file, header)
+			if err != nil {
 				res.Json(w, "не удалось сохранить изображение", http.StatusInternalServerError)
 				return
 			}
+			updates["image"] = path
 		}
-		photoPathHelper := game.HelpImage
-		fileHelper, headerHelper, err := r.FormFile("helpImage")
-		if err == nil && fileHelper != nil {
+
+		if file, header, err := r.FormFile("helpImage"); err == nil {
 			defer file.Close()
-			var saveErr error
-			photoPathHelper, saveErr = files.SaveFile(fileHelper, headerHelper)
-			if saveErr != nil {
-				res.Json(w, "не удалось сохранить изображение", http.StatusInternalServerError)
+
+			path, err := files.SaveFile(file, header)
+			if err != nil {
+				res.Json(w, "не удалось сохранить изображение помощи", http.StatusInternalServerError)
 				return
 			}
+			updates["help_image"] = path
 		}
-		videoPath := game.Video
-		videoFile, videoHeader, videoErr := r.FormFile("video")
-		if videoErr == nil && file != nil {
+
+		file, header, err := r.FormFile("video")
+		if err != nil && err != http.ErrMissingFile {
+			res.Json(w, "ошибка загрузки видео", http.StatusBadRequest)
+			return
+		}
+
+		if err == nil {
 			defer file.Close()
-			var saveErr error
-			videoPath, saveErr = files.SaveFile(videoFile, videoHeader)
-			if saveErr != nil {
+
+			path, err := files.SaveFile(file, header)
+			if err != nil {
 				res.Json(w, "не удалось сохранить видео", http.StatusInternalServerError)
 				return
 			}
+			updates["video"] = path
 		}
-		updateGame := Games{
-			Video:      videoPath,
-			Image:      photoPath,
-			Name:       r.FormValue("name"),
-			Id:         r.FormValue("id"),
-			HowToUseRu: r.FormValue("howToUseRu"),
-			HowToUseUz: r.FormValue("howToUseUz"),
-			HelpImage:  photoPathHelper,
-			Place:      r.FormValue("place"),
+
+		if v := r.FormValue("name"); v != "" {
+			updates["name"] = v
 		}
-		if err := handler.GamesRepository.DataBase.Model(&game).Updates(updateGame).Error; err != nil {
-			res.Json(w, "не удалось обновить сотрудника", http.StatusInternalServerError)
+		if v := r.FormValue("howToUseRu"); v != "" {
+			updates["how_to_use_ru"] = v
+		}
+		if v := r.FormValue("howToUseUz"); v != "" {
+			updates["how_to_use_uz"] = v
+		}
+		if v := r.FormValue("place"); v != "" {
+			updates["place"] = v
+		}
+
+		if len(updates) == 0 {
+			res.Json(w, "нет данных для обновления", http.StatusBadRequest)
 			return
 		}
+
+		if err := handler.GamesRepository.DataBase.
+			Model(&game).
+			Updates(updates).Error; err != nil {
+
+			res.Json(w, "не удалось обновить игру", http.StatusInternalServerError)
+			return
+		}
+
 		res.Json(w, map[string]interface{}{
 			"message": "игра обновлена",
-			"game":    updateGame,
+			"game":    updates,
 		}, http.StatusOK)
 	}
 }
+
 func (handler *GamesHandler) deleteGame() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		body, err := req.HandleBody[DeleteGameRequest](&w, r)

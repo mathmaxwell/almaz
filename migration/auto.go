@@ -7,6 +7,7 @@ import (
 	"demo/almaz/internal/games"
 	"demo/almaz/internal/offers"
 	"demo/almaz/internal/payment"
+	"demo/almaz/internal/promocode"
 	"demo/almaz/internal/transactions"
 	"os"
 
@@ -31,4 +32,5 @@ func main() {
 	db.AutoMigrate(&admincart.Admincart{})
 	db.AutoMigrate(&payment.Payment{})
 	db.AutoMigrate(&transactions.Transaction{})
+	db.AutoMigrate(&promocode.PromoCode{})
 }

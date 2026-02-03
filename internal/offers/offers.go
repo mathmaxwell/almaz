@@ -158,7 +158,6 @@ func (handler *OffersHandler) updateOffer() http.HandlerFunc {
 				return
 			}
 		}
-
 		updateOffer := Offers{
 			Image:  photoPath,
 			Status: r.FormValue("status"),
