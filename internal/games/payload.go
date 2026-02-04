@@ -15,14 +15,15 @@ type GamesRepositoryDeps struct {
 }
 
 type Games struct {
-	Id         string `json:"id"`
-	Video      string `json:"video"`
-	Name       string `json:"name"`
-	Image      string `json:"image"`
-	HowToUseUz string `json:"howToUseUz"`
-	HowToUseRu string `json:"howToUseRu"`
-	HelpImage  string `json:"helpImage"`
-	Place      string `json:"place"`
+	Id          string `json:"id"`
+	Video       string `json:"video"`
+	Name        string `json:"name"`
+	Image       string `json:"image"`
+	HowToUseUz  string `json:"howToUseUz"`
+	HowToUseRu  string `json:"howToUseRu"`
+	HelpImage   string `json:"helpImage"`
+	Place       string `json:"place"`
+	Description string `json:"description"` //one || two - server+user ID
 }
 type User struct {
 	Login    string `gorm:"unique" json:"login"`

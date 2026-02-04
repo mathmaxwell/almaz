@@ -78,14 +78,15 @@ func (handler *GamesHandler) create() http.HandlerFunc {
 			gameId = r.FormValue("id")
 		}
 		newGame := Games{
-			Id:         gameId,
-			Video:      videoPath,
-			Name:       r.FormValue("name"),
-			Place:      r.FormValue("place"),
-			HowToUseRu: r.FormValue("howToUseRu"),
-			HowToUseUz: r.FormValue("howToUseUz"),
-			Image:      photoPath,
-			HelpImage:  photoPathHelper,
+			Id:          gameId,
+			Video:       videoPath,
+			Name:        r.FormValue("name"),
+			Place:       r.FormValue("place"),
+			HowToUseRu:  r.FormValue("howToUseRu"),
+			HowToUseUz:  r.FormValue("howToUseUz"),
+			Description: r.FormValue("description"),
+			Image:       photoPath,
+			HelpImage:   photoPathHelper,
 		}
 		if err := handler.GamesRepository.DataBase.Create(&newGame).Error; err != nil {
 			res.Json(w, "db error", 500)
@@ -151,7 +152,6 @@ func (handler *GamesHandler) updateGame() http.HandlerFunc {
 			res.Json(w, "доступ запрещён", http.StatusForbidden)
 			return
 		}
-
 		gameId := r.FormValue("id")
 		if gameId == "" {
 			res.Json(w, "ID игры обязателен", http.StatusBadRequest)
@@ -222,7 +222,9 @@ func (handler *GamesHandler) updateGame() http.HandlerFunc {
 		if v := r.FormValue("place"); v != "" {
 			updates["place"] = v
 		}
-
+		if v := r.FormValue("description"); v != "" {
+			updates["description"] = v
+		}
 		if len(updates) == 0 {
 			res.Json(w, "нет данных для обновления", http.StatusBadRequest)
 			return
@@ -231,7 +233,6 @@ func (handler *GamesHandler) updateGame() http.HandlerFunc {
 		if err := handler.GamesRepository.DataBase.
 			Model(&game).
 			Updates(updates).Error; err != nil {
-
 			res.Json(w, "не удалось обновить игру", http.StatusInternalServerError)
 			return
 		}

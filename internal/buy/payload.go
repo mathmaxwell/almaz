@@ -55,6 +55,7 @@ type createBuyRequest struct {
 	PlayerId string `json:"playerId"`
 	ServerId string `json:"serverId"`
 	BotId    string `json:"botId"`
+	OfferId  string `json:"offerId"`
 }
 type Transaction struct {
 	Id        string `json:"id"`
