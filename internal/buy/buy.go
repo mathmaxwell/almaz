@@ -26,9 +26,9 @@ func NewGamesHandler(router *http.ServeMux, deps *BuyhandlerDeps) *BuyHandler {
 		AuthHandler:   deps.AuthHandler,
 	}
 	router.HandleFunc("/buy/create", handler.create())
+	router.HandleFunc("/buy/orderStatus", handler.orderStatus())
 	return handler
 }
-
 func (handler *BuyHandler) create() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		body, err := req.HandleBody[createBuyRequest](&w, r)
@@ -36,42 +36,68 @@ func (handler *BuyHandler) create() http.HandlerFunc {
 			res.Json(w, "bad request", 400)
 			return
 		}
-
-		var offers Offers
+		var offer Offers
 		if err := handler.BuyRepository.DataBase.
 			Where("id = ?", body.OfferId).
-			First(&offers).Error; err != nil {
+			First(&offer).Error; err != nil {
 			if errors.Is(err, gorm.ErrRecordNotFound) {
-				res.Json(w, "offer not found", 404)
+				res.Json(w, "offer не найдено", 404)
 				return
 			}
-			res.Json(w, "db error", 500)
+			res.Json(w, "ошибка базы данных", 500)
 			return
 		}
-
-		offerPrice, err := strconv.Atoi(offers.Price)
-		if err != nil {
-			res.Json(w, "price error", 500)
+		offerPrice, err := strconv.Atoi(offer.Price)
+		if err != nil || offerPrice <= 0 {
+			res.Json(w, "некорректная цена", 400)
 			return
 		}
-
 		var game Games
+
 		if err := handler.BuyRepository.DataBase.
 			Where("id = ?", body.GameId).
 			First(&game).Error; err != nil {
 			if errors.Is(err, gorm.ErrRecordNotFound) {
-				res.Json(w, "game not found", 404)
+				res.Json(w, "игра не найдена", 404)
 				return
 			}
-			res.Json(w, "failed to get game", 500)
+			res.Json(w, "ошибка при получении игры", 500)
 			return
 		}
+		botIdNumber, err := strconv.Atoi(body.BotId)
+		if err != nil {
+			res.Json(w, "некорректный bot id", 400)
+			return
+		}
+		provider := &BulkProvider{
+			ApiURL: os.Getenv("BULKAPI"),
+			ApiKey: os.Getenv("BULKKEY"),
+		}
+		order := "empty"
 
+		if game.Name == "Mobile Legends Global" || game.Name == "Mobile Legends" {
+
+			link := body.PlayerId // по умолчанию one
+
+			if game.Description == "two" {
+				if body.ServerId == "" {
+					res.Json(w, "не указан server id", 400)
+					return
+				}
+				link = body.PlayerId + "|" + body.ServerId
+			}
+
+			order, err = provider.CreateOrder(botIdNumber, link)
+		}
+
+		if err != nil {
+			res.Json(w, "ошибка провайдера", 500)
+			return
+		}
 		now := time.Now()
 		var txId string
 		err = handler.BuyRepository.DataBase.Transaction(func(tx *gorm.DB) error {
-			if err := handler.AuthHandler.DecreaseBalance(body.Token, offerPrice); err != nil {
-				res.Json(w, "not enough balance", 401)
+			if err := handler.AuthHandler.DecreaseBalance(tx, body.Token, offerPrice); err != nil {
 				return err
 			}
 			txId = token.CreateId()
@@ -85,75 +111,78 @@ func (handler *BuyHandler) create() http.HandlerFunc {
 				Hour:      now.Hour(),
 				Minute:    now.Minute(),
 				GameName:  game.Name,
-				DonatName: offers.UzName,
+				DonatName: offer.UzName,
 				CreatedBy: body.BotId,
-				Order:     "gameOrder",
+				Order:     order,
 			}
-
 			if err := tx.Create(&transaction).Error; err != nil {
 				return err
 			}
-
-			newBuy := Buy{
-				Id:       token.CreateId(),
-				Year:     now.Year(),
-				Month:    int(now.Month()),
-				Day:      now.Day(),
-				Hour:     now.Hour(),
-				Minute:   now.Minute(),
-				UserId:   body.Token,
-				Status:   "wait",
-				BotId:    body.BotId,
-				ServerId: body.ServerId,
-				PlayerId: body.PlayerId,
-				GameId:   body.GameId,
-				Price:    offerPrice,
-			}
-			if err := tx.Create(&newBuy).Error; err != nil {
-				return err
-			}
-
 			return nil
 		})
-
 		if err != nil {
-			if err.Error() == "not enough balance" {
-				res.Json(w, "not enough balance", 400)
+			if err.Error() == "недостаточно средств" {
+				res.Json(w, map[string]string{
+					"error": "Недостаточно средств на балансе",
+				}, 400)
 				return
 			}
-			res.Json(w, "transaction failed", 500)
+			if err.Error() == "пользователь не найден" {
+				res.Json(w, map[string]string{
+					"error": "Пользователь не найден",
+				}, 404)
+				return
+			}
+			res.Json(w, err, 500)
 			return
 		}
-
-		botIdNumber, err := strconv.Atoi(body.BotId)
-		if err != nil {
-			res.Json(w, "bot id error", 500)
-			return
-		}
-
-		provider := &BulkProvider{
-			ApiURL: os.Getenv("BULKAPI"),
-			ApiKey: os.Getenv("BULKKEY"),
-		}
-
-		order, err := provider.CreateOrder(
-			botIdNumber,
-			body.PlayerId,
-		)
-
-		if err != nil {
-			res.Json(w, "provider error", 500)
-			return
-		}
-
-		handler.BuyRepository.DataBase.
-			Model(&Transaction{}).
-			Where("id = ?", txId).
-			Update("order", order)
-
 		res.Json(w, map[string]string{
-			"status": "ok",
-			"order":  order,
+			"order":   order,
+			"message": "Покупка успешно выполнена",
 		}, 200)
+	}
+}
+func (handler *BuyHandler) orderStatus() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		body, err := req.HandleBody[OrderStatusRequest](&w, r)
+		if err != nil {
+			res.Json(w, "bad request", http.StatusBadRequest)
+			return
+		}
+
+		var game Games
+		if err := handler.BuyRepository.DataBase.
+			Where("id = ?", body.GameId).
+			First(&game).Error; err != nil {
+
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				res.Json(w, "игра не найдена", http.StatusNotFound)
+				return
+			}
+
+			res.Json(w, "ошибка при получении игры", http.StatusInternalServerError)
+			return
+		}
+
+		switch game.Name {
+		case "Mobile Legends Global", "Mobile Legends":
+			provider := &BulkProvider{
+				ApiURL: os.Getenv("BULKAPI"),
+				ApiKey: os.Getenv("BULKKEY"),
+			}
+
+			status, err := provider.OrderStatus(body.Order)
+			if err != nil {
+				res.Json(w, "ошибка получения статуса заказа", http.StatusBadGateway)
+				return
+			}
+
+			res.Json(w, status, http.StatusOK)
+			return
+
+		default:
+			res.Json(w, "игра не поддерживает проверку статуса", http.StatusBadRequest)
+			return
+		}
 	}
 }

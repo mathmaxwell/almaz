@@ -4,6 +4,7 @@ import (
 	"demo/almaz/configs"
 	"demo/almaz/internal/auth"
 	"demo/almaz/pkg/db"
+	"encoding/json"
 )
 
 type BuyRepository struct {
@@ -22,6 +23,7 @@ type BuyhandlerDeps struct {
 	*configs.Config
 	BuyRepository *BuyRepository
 	AuthHandler   *auth.AuthHandler
+	Provider      Provider
 }
 type Games struct {
 	Id         string `json:"id"`
@@ -32,6 +34,7 @@ type Games struct {
 	HowToUseRu string `json:"howToUseRu"`
 	HelpImage  string `json:"helpImage"`
 	Place      string `json:"place"`
+	Description string `json:"description"` //one || two - server+user ID
 }
 type Buy struct {
 	Id       string `json:"id"`
@@ -82,4 +85,19 @@ type Offers struct {
 	RuDesc string `json:"ruDesc"`
 	UzDesc string `json:"uzDesc"`
 	Status string `json:"status"`
+}
+type OrderStatusRequest struct {
+	GameId string `json:"gameId"`
+	Order  string `json:"order"`
+}
+type OrderStatusResponse struct {
+	Charge      string `json:"charge"`
+	Start_count string `json:"start_count"`
+	Status      string `json:"status"` //Completed-In progress-Pending-Partial-Canceled-Refunded
+	Remains     string `json:"remains"`
+	Currency    string `json:"currency"`
+}
+type CreateOrderResponse struct {
+	Order json.Number `json:"order"`
+	Error string      `json:"error,omitempty"`
 }

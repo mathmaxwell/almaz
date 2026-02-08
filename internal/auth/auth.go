@@ -9,6 +9,7 @@ import (
 	"net/http"
 
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
 
 func NewUserRepository(dataBase *db.Db) *AuthRepository {
@@ -48,23 +49,28 @@ func (handler *AuthHandler) UpdateBalance(token string, newPrice int) (User, err
 	}
 	return user, nil
 }
-func (handler *AuthHandler) DecreaseBalance(userToken string, price int) error {
-	result := handler.AuthRepository.DataBase.
+func (handler *AuthHandler) DecreaseBalance(tx *gorm.DB, userToken string, price int) error {
+	var user User
+	if err := tx.
+		Clauses(clause.Locking{Strength: "UPDATE"}).
+		Where("token = ?", userToken).
+		First(&user).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return errors.New("пользователь не найден")
+		}
+		return err
+	}
+
+	if user.Balance < price {
+		return errors.New("недостаточно средств")
+	}
+
+	// Самый надёжный вариант ↓
+	return tx.
 		Model(&User{}).
-		Where("token = ? AND balance >= ?", userToken, price).
-		Update("balance", gorm.Expr("balance - ?", price))
-
-	if result.Error != nil {
-		return result.Error
-	}
-
-	if result.RowsAffected == 0 {
-		return errors.New("not enough balance")
-	}
-
-	return nil
+		Where("token = ?", userToken).
+		Update("balance", gorm.Expr("balance - ?", price)).Error
 }
-
 func (handler *AuthHandler) login() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		body, err := req.HandleBody[LoginRequest](&w, r)
@@ -84,7 +90,6 @@ func (handler *AuthHandler) login() http.HandlerFunc {
 		res.Json(w, user, 200)
 	}
 }
-
 func (handler *AuthHandler) getUsers() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		body, err := req.HandleBody[GetUsersRequest](&w, r)
@@ -160,7 +165,6 @@ func (handler *AuthHandler) getUsers() http.HandlerFunc {
 		}, 200)
 	}
 }
-
 func (handler *AuthHandler) getUserById() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		body, err := req.HandleBody[GetBalanceRequest](&w, r)
@@ -202,7 +206,6 @@ func (handler *AuthHandler) deleteUser() http.HandlerFunc {
 		res.Json(w, "user deleted", 200)
 	}
 }
-
 func (handler *AuthHandler) register() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		body, err := req.HandleBody[LoginRequest](&w, r)
