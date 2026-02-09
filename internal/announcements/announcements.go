@@ -36,7 +36,7 @@ func (handler *AnnouncementsHandler) create() http.HandlerFunc {
 			res.Json(w, "you are not admin", 401)
 			return
 		}
-		if err := r.ParseMultipartForm(10 << 20); err != nil {
+		if err := r.ParseMultipartForm(200 << 20); err != nil {
 			res.Json(w, "failed to parse form", http.StatusBadRequest)
 			return
 		}
@@ -89,7 +89,7 @@ func (handler *AnnouncementsHandler) get() http.HandlerFunc {
 }
 func (handler *AnnouncementsHandler) update() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		if err := r.ParseMultipartForm(10 << 20); err != nil {
+		if err := r.ParseMultipartForm(200); err != nil {
 			res.Json(w, "не удалось разобрать форму", http.StatusBadRequest)
 			return
 		}
