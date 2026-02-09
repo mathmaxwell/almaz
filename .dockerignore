@@ -1,0 +1,5 @@
+postgres-data/
+uploads/
+.git/
+.env
+*.md
