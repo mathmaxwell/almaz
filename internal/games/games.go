@@ -7,8 +7,9 @@ import (
 	"demo/almaz/pkg/res"
 	"demo/almaz/pkg/token"
 	"errors"
-	"gorm.io/gorm"
 	"net/http"
+
+	"gorm.io/gorm"
 )
 
 func NewGamesRepository(dataBase *db.Db) *GamesRepository {
@@ -37,7 +38,7 @@ func (handler *GamesHandler) create() http.HandlerFunc {
 			res.Json(w, "you are not admin", 401)
 			return
 		}
-		if err := r.ParseMultipartForm(10 << 20); err != nil {
+		if err := r.ParseMultipartForm(200 << 20); err != nil {
 			res.Json(w, "failed to parse form", http.StatusBadRequest)
 			return
 		}
