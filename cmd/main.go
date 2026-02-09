@@ -13,6 +13,7 @@ import (
 	"demo/almaz/internal/transactions"
 	"demo/almaz/pkg/cors"
 	"demo/almaz/pkg/db"
+	"fmt"
 	"net/http"
 )
 
@@ -95,8 +96,9 @@ func main() {
 		AuthHandler:   authHandler,
 	})
 	server := http.Server{
-		Addr:    ":8080",
+		Addr:    ":4000",
 		Handler: mux,
 	}
+	fmt.Println("ishladi - 4000")
 	server.ListenAndServe()
 }
