@@ -10,6 +10,12 @@ type User struct {
 	Password string `json:"password"`
 	Token    string `json:"token"`
 	Balance  int    `json:"balance"`
+	UserRole string `json:"userRole"`
+}
+type UpdateUserRequest struct {
+	Token    string `json:"token"`
+	UserId   string `json:"userId"`
+	UserRole string `json:"userRole"`
 }
 
 type AuthHandler struct {
@@ -42,7 +48,8 @@ type AuthRepositoryDeps struct {
 type GetUsersRequest struct {
 	Page         int     `json:"page"`
 	Count        int     `json:"count"`
-	Login        *string `json:"login,omitempty"`
-	Token        *string `json:"token,omitempty"`
-	StartBalance *int    `json:"startBalance,omitempty"`
+	Login        *string `json:"login"`
+	Token        *string `json:"token"`
+	StartBalance *int    `json:"startBalance"`
+	UserRole     *string `json:"userRole"`
 }

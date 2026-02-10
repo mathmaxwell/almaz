@@ -25,6 +25,7 @@ func NewAuthHandler(router *http.ServeMux, deps AuthhandlerDeps) *AuthHandler {
 	router.HandleFunc("/users/login", handler.login())
 	router.HandleFunc("/users/getUserById", handler.getUserById())
 	router.HandleFunc("/users/getUsers", handler.getUsers())
+	router.HandleFunc("/users/updateUser", handler.update())
 	router.HandleFunc("/users/deleteUser", handler.deleteUser())
 	router.HandleFunc("/users/register", handler.register())
 	return handler
@@ -139,13 +140,19 @@ func (handler *AuthHandler) getUsers() http.HandlerFunc {
 				*body.StartBalance,
 			)
 		}
+		// 🎭 фильтр по роли
+		if body.UserRole != nil && *body.UserRole != "" {
+			query = query.Where(
+				"user_role = ?",
+				*body.UserRole,
+			)
+		}
 
 		var total int64
 		if err := query.Count(&total).Error; err != nil {
 			res.Json(w, "ошибка при подсчёте пользователей", 500)
 			return
 		}
-
 		var users []User
 		if err := query.
 			Offset(offset).
@@ -165,6 +172,49 @@ func (handler *AuthHandler) getUsers() http.HandlerFunc {
 		}, 200)
 	}
 }
+func (handler *AuthHandler) update() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		body, err := req.HandleBody[UpdateUserRequest](&w, r)
+		if err != nil {
+			return
+		}
+		var admin User
+		if err := handler.AuthRepository.DataBase.
+			Where("token = ?", body.Token).
+			First(&admin).Error; err != nil {
+			res.Json(w, "admin not found", 403)
+			return
+		}
+
+		if admin.Token != handler.Config.Token.AdminToken {
+			res.Json(w, "you are not admin", 403)
+			return
+		}
+
+		// 👤 пользователь для обновления
+		var user User
+		if err := handler.AuthRepository.DataBase.
+			Where("token = ?", body.UserId).
+			First(&user).Error; err != nil {
+			res.Json(w, "user is not found", 404)
+			return
+		}
+
+		user.UserRole = body.UserRole
+
+		if err := handler.AuthRepository.DataBase.
+			Model(&User{}).
+			Where("token = ?", body.UserId).
+			Update("user_role", body.UserRole).
+			Error; err != nil {
+			res.Json(w, "failed to update user", 500)
+			return
+		}
+
+		res.Json(w, user, 200)
+	}
+}
+
 func (handler *AuthHandler) getUserById() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		body, err := req.HandleBody[GetBalanceRequest](&w, r)
@@ -229,6 +279,7 @@ func (handler *AuthHandler) register() http.HandlerFunc {
 			Password: body.Password,
 			Token:    tokenId,
 			Balance:  0,
+			UserRole: "user",
 		}
 		handler.AuthRepository.DataBase.Create(&data)
 		res.Json(w, data, 200)

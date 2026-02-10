@@ -61,16 +61,17 @@ func (handler *OffersHandler) create() http.HandlerFunc {
 			gameId = r.FormValue("id")
 		}
 		newGame := Offers{
-			Id:     gameId,
-			Image:  photoPath,
-			Status: r.FormValue("status"),
-			GameId: r.FormValue("gameId"),
-			UzName: r.FormValue("uzName"),
-			RuName: r.FormValue("ruName"),
-			Price:  r.FormValue("price"),
-			RuDesc: r.FormValue("ruDesc"),
-			UzDesc: r.FormValue("uzDesc"),
-			BotId:  r.FormValue("botId"),
+			Id:         gameId,
+			Image:      photoPath,
+			Status:     r.FormValue("status"),
+			GameId:     r.FormValue("gameId"),
+			UzName:     r.FormValue("uzName"),
+			RuName:     r.FormValue("ruName"),
+			Price:      r.FormValue("price"),
+			SuperPrice: r.FormValue("superPrice"),
+			RuDesc:     r.FormValue("ruDesc"),
+			UzDesc:     r.FormValue("uzDesc"),
+			BotId:      r.FormValue("botId"),
 		}
 		if err := handler.OffersRepository.DataBase.Create(&newGame).Error; err != nil {
 			res.Json(w, "db error", 500)
@@ -155,16 +156,17 @@ func (handler *OffersHandler) updateOffer() http.HandlerFunc {
 			}
 		}
 		updateOffer := Offers{
-			Image:  photoPath,
-			Status: r.FormValue("status"),
-			Id:     r.FormValue("id"),
-			GameId: r.FormValue("gameId"),
-			UzName: r.FormValue("uzName"),
-			RuName: r.FormValue("ruName"),
-			Price:  r.FormValue("price"),
-			RuDesc: r.FormValue("ruDesc"),
-			UzDesc: r.FormValue("uzDesc"),
-			BotId:  r.FormValue("botId"),
+			Image:      photoPath,
+			Status:     r.FormValue("status"),
+			Id:         r.FormValue("id"),
+			GameId:     r.FormValue("gameId"),
+			UzName:     r.FormValue("uzName"),
+			RuName:     r.FormValue("ruName"),
+			SuperPrice: r.FormValue("superPrice"),
+			Price:      r.FormValue("price"),
+			RuDesc:     r.FormValue("ruDesc"),
+			UzDesc:     r.FormValue("uzDesc"),
+			BotId:      r.FormValue("botId"),
 		}
 		if err := handler.OffersRepository.DataBase.Model(&offer).Updates(updateOffer).Error; err != nil {
 			res.Json(w, "не удалось обновить предложение", http.StatusInternalServerError)

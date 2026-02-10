@@ -26,14 +26,14 @@ type BuyhandlerDeps struct {
 	Provider      Provider
 }
 type Games struct {
-	Id         string `json:"id"`
-	Video      string `json:"video"`
-	Name       string `json:"name"`
-	Image      string `json:"image"`
-	HowToUseUz string `json:"howToUseUz"`
-	HowToUseRu string `json:"howToUseRu"`
-	HelpImage  string `json:"helpImage"`
-	Place      string `json:"place"`
+	Id          string `json:"id"`
+	Video       string `json:"video"`
+	Name        string `json:"name"`
+	Image       string `json:"image"`
+	HowToUseUz  string `json:"howToUseUz"`
+	HowToUseRu  string `json:"howToUseRu"`
+	HelpImage   string `json:"helpImage"`
+	Place       string `json:"place"`
 	Description string `json:"description"` //one || two - server+user ID
 }
 type Buy struct {
@@ -75,16 +75,17 @@ type Transaction struct {
 	Order     string `json:"order"`
 }
 type Offers struct {
-	Id     string `json:"id"`
-	GameId string `json:"gameId"`
-	BotId  string `json:"botId"`
-	Image  string `json:"image"`
-	UzName string `json:"uzName"`
-	RuName string `json:"ruName"`
-	Price  string `json:"price"`
-	RuDesc string `json:"ruDesc"`
-	UzDesc string `json:"uzDesc"`
-	Status string `json:"status"`
+	Id         string `json:"id"`
+	GameId     string `json:"gameId"`
+	BotId      string `json:"botId"`
+	Image      string `json:"image"`
+	UzName     string `json:"uzName"`
+	RuName     string `json:"ruName"`
+	Price      string `json:"price"`
+	SuperPrice string `json:"superPrice"`
+	RuDesc     string `json:"ruDesc"`
+	UzDesc     string `json:"uzDesc"`
+	Status     string `json:"status"`
 }
 type OrderStatusRequest struct {
 	GameId string `json:"gameId"`

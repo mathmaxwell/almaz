@@ -15,16 +15,17 @@ type OffersRepositoryDeps struct {
 }
 
 type Offers struct {
-	Id     string `json:"id"`
-	GameId string `json:"gameId"`
-	BotId  string `json:"botId"`
-	Image  string `json:"image"`
-	UzName string `json:"uzName"`
-	RuName string `json:"ruName"`
-	Price  string `json:"price"`
-	RuDesc string `json:"ruDesc"`
-	UzDesc string `json:"uzDesc"`
-	Status string `json:"status"`
+	Id         string `json:"id"`
+	GameId     string `json:"gameId"`
+	BotId      string `json:"botId"`
+	Image      string `json:"image"`
+	UzName     string `json:"uzName"`
+	RuName     string `json:"ruName"`
+	Price      string `json:"price"`
+	SuperPrice string `json:"superPrice"`
+	RuDesc     string `json:"ruDesc"`
+	UzDesc     string `json:"uzDesc"`
+	Status     string `json:"status"`
 }
 type User struct {
 	Login    string `gorm:"unique" json:"login"`

@@ -29,6 +29,7 @@ func NewGamesHandler(router *http.ServeMux, deps *BuyhandlerDeps) *BuyHandler {
 	router.HandleFunc("/buy/orderStatus", handler.orderStatus())
 	return handler
 }
+
 func (handler *BuyHandler) create() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		body, err := req.HandleBody[createBuyRequest](&w, r)
@@ -36,7 +37,9 @@ func (handler *BuyHandler) create() http.HandlerFunc {
 			res.Json(w, "bad request", 400)
 			return
 		}
+		user, err := handler.AuthHandler.GetUserByToken(body.Token)
 		var offer Offers
+
 		if err := handler.BuyRepository.DataBase.
 			Where("id = ?", body.OfferId).
 			First(&offer).Error; err != nil {
@@ -47,7 +50,12 @@ func (handler *BuyHandler) create() http.HandlerFunc {
 			res.Json(w, "ошибка базы данных", 500)
 			return
 		}
-		offerPrice, err := strconv.Atoi(offer.Price)
+		var offerPrice int
+		if user.UserRole == "superUser" {
+			offerPrice, err = strconv.Atoi(offer.SuperPrice)
+		} else {
+			offerPrice, err = strconv.Atoi(offer.Price)
+		}
 		if err != nil || offerPrice <= 0 {
 			res.Json(w, "некорректная цена", 400)
 			return
