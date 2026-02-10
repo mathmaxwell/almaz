@@ -98,18 +98,8 @@ func (handler *GamesHandler) create() http.HandlerFunc {
 }
 func (handler *GamesHandler) getGames() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		body, err := req.HandleBody[GetGamesRequest](&w, r)
-		if err != nil {
-			res.Json(w, err.Error(), 400)
-			return
-		}
-		_, err = handler.AuthHandler.GetUserByToken(body.Token)
-		if err != nil {
-			res.Json(w, err, 400)
-			return
-		}
 		var games []Games
-		err = handler.GamesRepository.DataBase.Model(&Games{}).Find(&games).Error
+		err := handler.GamesRepository.DataBase.Model(&Games{}).Find(&games).Error
 		if err != nil {
 			res.Json(w, "failed to get games", 500)
 			return

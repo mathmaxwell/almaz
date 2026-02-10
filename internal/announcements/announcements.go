@@ -68,18 +68,8 @@ func (handler *AnnouncementsHandler) create() http.HandlerFunc {
 }
 func (handler *AnnouncementsHandler) get() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		body, err := req.HandleBody[GetAnnouncementsRequest](&w, r)
-		if err != nil {
-			res.Json(w, err.Error(), 400)
-			return
-		}
-		_, err = handler.AuthHandler.GetUserByToken(body.Token)
-		if err != nil {
-			res.Json(w, "user is not found", 400)
-			return
-		}
 		var offers []Announcements
-		err = handler.AnnouncementsRepository.DataBase.Model(&Announcements{}).Find(&offers).Error
+		err := handler.AnnouncementsRepository.DataBase.Model(&Announcements{}).Find(&offers).Error
 		if err != nil {
 			res.Json(w, "failed to get offers", 500)
 			return

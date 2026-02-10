@@ -40,9 +40,7 @@ type AnnouncementshandlerDeps struct {
 	AnnouncementsRepository *AnnouncementsRepository
 	AuthHandler             *auth.AuthHandler
 }
-type GetAnnouncementsRequest struct {
-	Token string `json:"token"`
-}
+
 type DeleteAnnouncementsRequest struct {
 	Token string `json:"token"`
 	Id    string `json:"id"`

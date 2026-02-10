@@ -86,11 +86,7 @@ func (handler *OffersHandler) getOffers() http.HandlerFunc {
 			res.Json(w, err.Error(), 400)
 			return
 		}
-		_, err = handler.AuthHandler.GetUserByToken(body.Token)
-		if err != nil {
-			res.Json(w, "user is not found", 400)
-			return
-		}
+
 		var offers []Offers
 		err = handler.OffersRepository.DataBase.Model(&Offers{}).Where("game_id = ?", body.GameId).Find(&offers).Error
 		if err != nil {
@@ -107,11 +103,7 @@ func (handler *OffersHandler) getOffersById() http.HandlerFunc {
 			res.Json(w, err.Error(), 400)
 			return
 		}
-		_, err = handler.AuthHandler.GetUserByToken(body.Token)
-		if err != nil {
-			res.Json(w, "user is not found", 400)
-			return
-		}
+
 		var offers Offers
 		err = handler.OffersRepository.DataBase.Where("id = ?", body.Id).First(&offers).Error
 		if err != nil {
