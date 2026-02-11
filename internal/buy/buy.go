@@ -83,7 +83,7 @@ func (handler *BuyHandler) create() http.HandlerFunc {
 		}
 		order := "empty"
 
-		if game.Name == "Mobile Legends Global" || game.Name == "Mobile Legends" {
+		if game.Name == "Mobile Legends Global" || game.Name == "Mobile Legends" || game.Name == "PUBG Mobile" || game.Name == "Freefire Global" {
 
 			link := body.PlayerId // по умолчанию one
 
