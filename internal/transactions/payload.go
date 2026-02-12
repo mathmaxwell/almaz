@@ -52,3 +52,12 @@ type TransactionHandler struct {
 type deleteRequest struct {
 	Id string `json:"id"`
 }
+type getByPeriodRequest struct {
+	Token      string `json:"token"`
+	StartDay   int    `json:"startDay"`
+	StartMonth int    `json:"startMonth"`
+	StartYear  int    `json:"startYear"`
+	EndDay     int    `json:"endDay"`
+	EndMonth   int    `json:"endMonth"`
+	EndYear    int    `json:"endYear"`
+}
