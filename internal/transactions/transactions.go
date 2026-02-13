@@ -104,14 +104,10 @@ func (handler *TransactionHandler) getByPeriod() http.HandlerFunc {
 			res.Json(w, err, 400)
 			return
 		}
-
-		// проверка админ-токена
 		if body.Token != handler.Config.Token.AdminToken {
 			res.Json(w, "you are not admin", 403)
 			return
 		}
-
-		// минимальная валидация дат
 		if body.StartYear < 2000 || body.EndYear < 2000 ||
 			body.StartMonth < 1 || body.StartMonth > 12 ||
 			body.EndMonth < 1 || body.EndMonth > 12 ||

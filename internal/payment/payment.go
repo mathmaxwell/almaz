@@ -28,6 +28,7 @@ func NewPaymentHandler(router *http.ServeMux, deps PaymenthandlerDeps) *PaymentH
 	router.HandleFunc("/payment/updatePayment", handler.updatePayment())
 	router.HandleFunc("/payment/deletePayment", handler.deletePayment())
 	router.HandleFunc("/payment/createTelegram", handler.createTelegram())
+	router.HandleFunc("/payment/getPaymentByPeriod", handler.getPaymentByPeriod())
 	return handler
 }
 func (handler *PaymentHandler) getPayment() http.HandlerFunc {
@@ -391,3 +392,38 @@ func (handler *PaymentHandler) createTelegram() http.HandlerFunc {
 		}, 200)
 	}
 } //works transactions
+func (handler *PaymentHandler) getPaymentByPeriod() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		body, err := req.HandleBody[getPaymentByPeriodRequest](&w, r)
+		if err != nil {
+			res.Json(w, err, 400)
+			return
+		}
+		_, err = handler.AuthHandler.GetUserByToken(body.Token)
+		if err != nil {
+			res.Json(w, err, 401)
+			return
+		}
+		var payments []Payment
+		err = handler.PaymentRepository.DataBase.
+			Where(
+				"(year > ? OR "+
+					"(year = ? AND month > ?) OR "+
+					"(year = ? AND month = ? AND day >= ?)) "+
+					"AND "+
+					"(year < ? OR "+
+					"(year = ? AND month < ?) OR "+
+					"(year = ? AND month = ? AND day <= ?))",
+				body.StartYear, body.StartYear, body.StartMonth, body.StartYear, body.StartMonth, body.StartDay,
+				body.EndYear, body.EndYear, body.EndMonth, body.EndYear, body.EndMonth, body.EndDay,
+			).
+			Order("year DESC, month DESC, day DESC, hour DESC, minute DESC").
+			Find(&payments).Error
+		if err != nil {
+			res.Json(w, err, 500)
+			return
+		}
+
+		res.Json(w, payments, 200)
+	}
+}
