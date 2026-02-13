@@ -102,3 +102,8 @@ type CreateOrderResponse struct {
 	Order json.Number `json:"order"`
 	Error string      `json:"error,omitempty"`
 }
+type BalanceResponse struct {
+	Balance  string `json:"balance"`
+	Currency string `json:"currency"`
+	Error    string `json:"error,omitempty"`
+}

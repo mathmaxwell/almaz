@@ -133,3 +133,43 @@ func (b *BulkProvider) OrderStatus(order string) (*OrderStatusResponse, error) {
 
 	return &result, nil
 }
+func (b *BulkProvider) GetBalance() (string, string, error) {
+	payload := map[string]interface{}{
+		"key":    b.ApiKey,
+		"action": "balance",
+	}
+	jsonBody, err := json.Marshal(payload)
+	if err != nil {
+		return "", "", err
+	}
+	req, err := http.NewRequest(
+		http.MethodPost,
+		b.ApiURL,
+		bytes.NewBuffer(jsonBody),
+	)
+	if err != nil {
+		return "", "", err
+	}
+	req.Header.Set("Content-Type", "application/json")
+	client := &http.Client{Timeout: 10 * time.Second}
+	resp, err := client.Do(req)
+	if err != nil {
+		return "", "", err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode >= 400 {
+		body, _ := io.ReadAll(resp.Body)
+		return "", "", fmt.Errorf("bulk bad status: %d, body: %s", resp.StatusCode, body)
+	}
+	var result BalanceResponse
+	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+		return "", "", err
+	}
+	if result.Error != "" {
+		return "", "", errors.New(result.Error)
+	}
+	if result.Balance == "" {
+		return "", "", errors.New("bulk did not return balance")
+	}
+	return result.Balance, result.Currency, nil
+}
