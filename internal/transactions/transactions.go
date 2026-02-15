@@ -24,7 +24,7 @@ func NewTranactionHandler(router *http.ServeMux, deps *TransactionhandlerDeps) *
 	router.HandleFunc("/transactions/transactionsCreate", handler.create())
 	router.HandleFunc("/transactions/transactionsGet", handler.getAll())
 	router.HandleFunc("/transactions/transactionsDelete", handler.delete())
-	router.HandleFunc("/transactions/getByPeriod", handler.getByPeriod())
+	router.HandleFunc("/transactions/getTransactionsByPeriod", handler.getTransactionsByPeriod())
 	return handler
 }
 
@@ -97,7 +97,7 @@ func (handler *TransactionHandler) delete() http.HandlerFunc {
 	}
 }
 
-func (handler *TransactionHandler) getByPeriod() http.HandlerFunc {
+func (handler *TransactionHandler) getTransactionsByPeriod() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		body, err := req.HandleBody[getByPeriodRequest](&w, r)
 		if err != nil {

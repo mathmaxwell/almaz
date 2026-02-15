@@ -60,6 +60,9 @@ type createBuyRequest struct {
 	BotId    string `json:"botId"`
 	OfferId  string `json:"offerId"`
 }
+type getBalanceRequest struct {
+	Token string `json:"token"`
+}
 type Transaction struct {
 	Id        string `json:"id"`
 	UserId    string `json:"userId"`

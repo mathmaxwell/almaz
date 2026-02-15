@@ -29,6 +29,7 @@ func NewGamesHandler(router *http.ServeMux, deps *BuyhandlerDeps) *BuyHandler {
 	}
 	router.HandleFunc("/buy/create", handler.create())
 	router.HandleFunc("/buy/orderStatus", handler.orderStatus())
+	router.HandleFunc("/buy/getBalance", handler.getBalance())
 	return handler
 }
 
@@ -39,13 +40,11 @@ func (handler *BuyHandler) create() http.HandlerFunc {
 			res.Json(w, "bad request", 400)
 			return
 		}
-
 		user, err := handler.AuthHandler.GetUserByToken(body.Token)
 		if err != nil {
 			res.Json(w, "пользователь не найден", 404)
 			return
 		}
-
 		var offer Offers
 		if err := handler.BuyRepository.DataBase.
 			Where("id = ?", body.OfferId).
@@ -57,7 +56,6 @@ func (handler *BuyHandler) create() http.HandlerFunc {
 			res.Json(w, "ошибка базы данных", 500)
 			return
 		}
-
 		var offerPrice int
 		if user.UserRole == "superUser" {
 			offerPrice, err = strconv.Atoi(offer.SuperPrice)
@@ -68,7 +66,6 @@ func (handler *BuyHandler) create() http.HandlerFunc {
 			res.Json(w, "некорректная цена", 400)
 			return
 		}
-
 		var game Games
 		if err := handler.BuyRepository.DataBase.
 			Where("id = ?", body.GameId).
@@ -80,20 +77,16 @@ func (handler *BuyHandler) create() http.HandlerFunc {
 			res.Json(w, "ошибка при получении игры", 500)
 			return
 		}
-
 		botIdNumber, err := strconv.Atoi(body.BotId)
 		if err != nil {
 			res.Json(w, "некорректный bot id", 400)
 			return
 		}
-
 		provider := &BulkProvider{
 			ApiURL: os.Getenv("BULKAPI"),
 			ApiKey: os.Getenv("BULKKEY"),
 		}
-
 		order := "empty"
-
 		if game.Name == "Mobile Legends Global" || game.Name == "Mobile Legends" || game.Name == "PUBG Mobile" || game.Name == "Freefire Global" {
 			link := body.PlayerId
 			if game.Description == "two" {
@@ -103,46 +96,36 @@ func (handler *BuyHandler) create() http.HandlerFunc {
 				}
 				link = body.PlayerId + "|" + body.ServerId
 			}
-
-			// 🔹 Проверка баланса провайдера в сум
 			balanceStr, _, err := provider.GetBalance()
 			if err != nil {
 				res.Json(w, "не удалось получить баланс провайдера", 500)
 				return
 			}
-
 			providerBalanceUSD, err := strconv.ParseFloat(balanceStr, 64)
 			if err != nil {
 				res.Json(w, "ошибка обработки баланса провайдера", 500)
 				return
 			}
-
 			providerBalanceSom := providerBalanceUSD * USD_TO_SUM
 			offerPriceFloat := float64(offerPrice)
-
 			if providerBalanceSom < offerPriceFloat {
 				res.Json(w, "недостаточно средств у провайдера", 400)
 				return
 			}
-
 			if providerBalanceSom-offerPriceFloat < 100000 {
 				res.Json(w, "баланс провайдера ниже допустимого порога", 400)
 				return
 			}
-
-			// 🔹 Транзакция: списание + создание заказа + сохранение
 			now := time.Now()
 			var txId string
 			err = handler.BuyRepository.DataBase.Transaction(func(tx *gorm.DB) error {
 				if err := handler.AuthHandler.DecreaseBalance(tx, body.Token, offerPrice); err != nil {
 					return err
 				}
-
 				orderId, err := provider.CreateOrder(botIdNumber, link)
 				if err != nil {
 					return err
 				}
-
 				txId = token.CreateId()
 				transaction := Transaction{
 					Id:        txId,
@@ -162,7 +145,6 @@ func (handler *BuyHandler) create() http.HandlerFunc {
 				if err := tx.Create(&transaction).Error; err != nil {
 					return err
 				}
-
 				order = orderId
 				return nil
 			})
@@ -184,14 +166,12 @@ func (handler *BuyHandler) create() http.HandlerFunc {
 				return
 			}
 		}
-
 		res.Json(w, map[string]string{
 			"order":   order,
 			"message": "Покупка успешно выполнена",
 		}, 200)
 	}
 }
-
 func (handler *BuyHandler) orderStatus() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		body, err := req.HandleBody[OrderStatusRequest](&w, r)
@@ -209,13 +189,11 @@ func (handler *BuyHandler) orderStatus() http.HandlerFunc {
 				res.Json(w, "игра не найдена", http.StatusNotFound)
 				return
 			}
-
 			res.Json(w, "ошибка при получении игры", http.StatusInternalServerError)
 			return
 		}
-
 		switch game.Name {
-		case "Mobile Legends Global", "Mobile Legends":
+		case "Mobile Legends Global", "Mobile Legends", "PUBG Mobile", "Freefire Global":
 			provider := &BulkProvider{
 				ApiURL: os.Getenv("BULKAPI"),
 				ApiKey: os.Getenv("BULKKEY"),
@@ -234,5 +212,29 @@ func (handler *BuyHandler) orderStatus() http.HandlerFunc {
 			res.Json(w, "игра не поддерживает проверку статуса", http.StatusBadRequest)
 			return
 		}
+	}
+}
+
+func (handler *BuyHandler) getBalance() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		body, err := req.HandleBody[getBalanceRequest](&w, r)
+		if err != nil {
+			res.Json(w, err.Error(), 400)
+			return
+		}
+		if body.Token != handler.Config.Token.AdminToken {
+			res.Json(w, "you are not admin", 401)
+			return
+		}
+		provider := &BulkProvider{
+			ApiURL: os.Getenv("BULKAPI"),
+			ApiKey: os.Getenv("BULKKEY"),
+		}
+		balanceStr, _, err := provider.GetBalance()
+		if err != nil {
+			res.Json(w, "не удалось получить баланс провайдера", 500)
+			return
+		}
+		res.Json(w, balanceStr, 200)
 	}
 }
